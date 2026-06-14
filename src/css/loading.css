@@ -1,0 +1,19 @@
+.loading {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+}
+
+.spinner {
+    border: 3px solid #f0f0f0;
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

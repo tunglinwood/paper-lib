@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper Library - Research Archive</title>
+    <link rel="stylesheet" href="src/css/base.css">
+    <link rel="stylesheet" href="src/css/layout.css">
+    <link rel="stylesheet" href="src/css/header.css">
+    <link rel="stylesheet" href="src/css/search.css">
+    <link rel="stylesheet" href="src/css/sidebar.css">
+    <link rel="stylesheet" href="src/css/trending.css">
+    <link rel="stylesheet" href="src/css/cards.css">
+    <link rel="stylesheet" href="src/css/pagination.css">
+    <link rel="stylesheet" href="src/css/modal.css">
+    <link rel="stylesheet" href="src/css/loading.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-text">
+            <h1 data-i18n="appTitle">Paper Library</h1>
+            <p data-i18n="appSubtitle">Research Archive - Search, Browse &amp; Export</p>
+        </div>
+        <button class="lang-toggle" id="langToggleBtn">中文</button>
+    </div>
+
+    <div class="search-container">
+        <div class="search-box">
+            <input type="text" class="search-input" id="searchInput" data-i18n-placeholder="searchPlaceholder" placeholder="Search by title, author, venue, or keywords...">
+            <button class="search-btn" data-i18n="searchBtn" aria-label="Search">Search</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalPapers">-</div>
+                    <div class="stat-label">Papers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalSize">-</div>
+                    <div class="stat-label">GB</div>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <h3 data-i18n="yearFilter">Year</h3>
+                <div id="yearFilters"></div>
+            </div>
+
+            <div class="filter-group">
+                <h3 data-i18n="topicsFilter">Topics</h3>
+                <div id="topicFilters"></div>
+            </div>
+        </aside>
+
+        <main>
+            <div class="papers-header">
+                <span class="papers-count" id="papersCount">Loading...</span>
+                <select class="sort-select" id="sortSelect">
+                    <option value="year" data-i18n="sortByYear" selected>Sort by Year</option>
+                    <option value="relevance" data-i18n="sortByRelevance">Sort by Relevance</option>
+                    <option value="title" data-i18n="sortByTitle">Sort by Title</option>
+                </select>
+            </div>
+
+            <div class="trending-bar">
+                <div class="trending-header">
+                    <h3 data-i18n="trending">Trending</h3>
+                    <div class="trending-tabs">
+                        <button class="trending-tab active" data-window="7" data-i18n="trending7d">7d</button>
+                        <button class="trending-tab" data-window="30" data-i18n="trending30d">30d</button>
+                        <button class="trending-tab" data-window="all" data-i18n="trendingAll">All</button>
+                    </div>
+                </div>
+                <ul class="trending-list" id="trendingList">
+                    <li class="trending-empty">Loading...</li>
+                </ul>
+            </div>
+
+            <div id="papersList"></div>
+        </main>
+    </div>
+
+    <!-- Paper Detail Modal -->
+    <div class="modal" id="paperModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modalTitle" style="font-size: 1.3rem; margin-bottom: 0.5rem;"></h2>
+                    <p id="modalAuthors" style="color: #666;"></p>
+                </div>
+                <button class="modal-close" aria-label="Close">&times;</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/page-agent@1.8.1/dist/iife/page-agent.demo.js?model=glm-4.5-air&baseURL=http://174.1.21.3:8000/v1&apiKey=NA&lang=en-US" crossorigin="true"></script>
+    <script type="module">
+        import { init } from './src/js/main.js';
+        import { setLang, getCurrentLang } from './src/js/i18n.js';
+        setLang(getCurrentLang());
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+.sidebar {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    height: fit-content;
+}
+
+.sidebar h3 {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 1rem;
+    letter-spacing: 0.5px;
+}
+
+.filter-group {
+    margin-bottom: 1.5rem;
+}
+
+.filter-option input {
+    accent-color: var(--primary);
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    opacity: 0.9;
+}
+
+.year-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.year-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: #f0f0f0;
+    padding: 0.25rem 0.65rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s;
+}
+
+.year-pill:hover {
+    background: #e0e0e0;
+}
+
+.year-pill.active {
+    background: var(--primary);
+    color: white;
+}
+
+.year-pill input {
+    display: none;
+}
+
+.topic-tag {
+    display: inline-block;
+    background: #f0f0f0;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    margin: 0.25rem;
+    cursor: pointer;
+}
+
+.topic-tag:hover {
+    background: var(--primary);
+    color: white;
+}

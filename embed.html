@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paper Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --primary: #667eea;
+    --primary-dark: #5a67d8;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #1a202c;
+    --text-muted: #718096;
+    --border: #e2e8f0;
+    --tag-bg: #edf2f7;
+    --tag-color: #4a5568;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  #app { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
+  body.sidebar #app { max-width: 400px; }
+  body.sidebar { font-size: 0.9rem; }
+
+  .lang-toggle-embed {
+    position: fixed; top: 0.75rem; right: 0.75rem;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.3rem 0.6rem;
+    font-size: 0.85rem; cursor: pointer; color: var(--text-muted);
+    z-index: 11; transition: background 0.15s;
+  }
+  .lang-toggle-embed:hover { background: var(--tag-bg); }
+  body.sidebar .lang-toggle-embed { top: 0.5rem; right: 3rem; }
+
+  .close-btn {
+    position: fixed; top: 0.75rem; right: 0.75rem;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; width: 36px; height: 36px;
+    font-size: 1.25rem; cursor: pointer; color: var(--text-muted);
+    display: none; align-items: center; justify-content: center;
+    z-index: 10; transition: background 0.15s;
+  }
+  .close-btn:hover { background: var(--tag-bg); }
+  body.sidebar .close-btn { display: flex; }
+  body.sidebar .lang-toggle-embed { top: 0.5rem; right: 3.5rem; }
+
+  .paper-card {
+    background: var(--card); border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden;
+  }
+  .paper-header { padding: 1.5rem; border-bottom: 1px solid var(--border); }
+  .paper-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+  body.sidebar .paper-title { font-size: 1rem; }
+  .paper-authors { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.75rem; }
+  .paper-meta { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .paper-meta p { font-size: 0.85rem; color: var(--text-muted); }
+  .paper-meta strong { color: var(--text); }
+  .paper-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; }
+  .tag {
+    background: var(--tag-bg); color: var(--tag-color);
+    padding: 0.15rem 0.5rem; border-radius: 9999px;
+    font-size: 0.75rem; white-space: nowrap;
+  }
+
+  .paper-actions {
+    padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+    display: flex; gap: 0.5rem; flex-wrap: wrap;
+  }
+  .btn {
+    padding: 0.5rem 1rem; border-radius: 8px; border: none;
+    font-size: 0.85rem; font-weight: 500; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-outline:hover { background: var(--tag-bg); }
+
+  .pdf-container { display: none; }
+  .pdf-container.active { display: block; }
+  .pdf-frame {
+    width: 100%; height: 60vh; border: none;
+    border-top: 1px solid var(--border);
+  }
+  body.sidebar .pdf-frame { height: 70vh; }
+
+  .loading {
+    display: flex; align-items: center; justify-content: center;
+    padding: 4rem; color: var(--text-muted);
+  }
+  .spinner {
+    width: 24px; height: 24px; border: 3px solid var(--border);
+    border-top-color: var(--primary); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin-right: 0.75rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error {
+    text-align: center; padding: 4rem 2rem; color: #e53e3e;
+  }
+  .error-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .error-msg { color: var(--text-muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<button class="lang-toggle-embed" id="langToggleEmbed">中文</button>
+<button class="close-btn" onclick="closePreview()" title="Close" aria-label="Close preview">&times;</button>
+<div id="app">
+  <div class="loading" id="loading"><div class="spinner"></div><span data-i18n="loading">Loading paper...</span></div>
+  <div id="content" style="display:none;"></div>
+</div>
+
+<script>
+(function() {
+  // --- Inline i18n (mirrors src/js/i18n.js) ---
+  var embedTranslations = {
+    en: {
+      untitled: 'Untitled', unknownAuthors: 'Unknown authors',
+      year: 'Year', venue: 'Venue', doi: 'DOI',
+      previewPdf: 'Preview PDF', downloadPdf: 'Download PDF',
+      loading: 'Loading paper...', langToggle: '中文',
+      paperNotFound: 'Paper not found', missingId: 'Missing paper_id',
+      missingIdMsg: 'Provide a paper_id query parameter to preview a paper.',
+      serverError: 'Server error'
+    },
+    zh: {
+      untitled: '无标题', unknownAuthors: '未知作者',
+      year: '年份', venue: '期刊', doi: 'DOI',
+      previewPdf: '预览 PDF', downloadPdf: '下载 PDF',
+      loading: '正在加载论文...', langToggle: 'English',
+      paperNotFound: '未找到论文', missingId: '缺少 paper_id',
+      missingIdMsg: '请提供 paper_id 参数以预览论文。',
+      serverError: '服务器错误'
+    }
+  };
+  var currentLang = 'en';
+  try { var s = localStorage.getItem('paperLibLang'); if (s === 'en' || s === 'zh') currentLang = s; } catch {}
+  function t(k) { return (embedTranslations[currentLang] || embedTranslations.en)[k] || k; }
+  function setLang(lang) {
+    currentLang = lang;
+    try { localStorage.setItem('paperLibLang', lang); } catch {}
+    document.documentElement.lang = lang;
+    document.getElementById('langToggleEmbed').textContent = t('langToggle');
+    document.querySelectorAll('[data-i18n]').forEach(function(el) {
+      el.textContent = t(el.dataset.i18n);
+    });
+  }
+  document.getElementById('langToggleEmbed').addEventListener('click', function() {
+    setLang(currentLang === 'en' ? 'zh' : 'en');
+    if (window._embedPaper) render(window._embedPaper);
+  });
+  setLang(currentLang);
+
+  // --- Host detection (mirrors src/js/api.js) ---
+  var IS_FASTGPT = location.port === '3000';
+  var IS_STONE = location.hostname === 'huagpt.meta-stone.net';
+  var API_BASE = IS_STONE
+      ? 'https://174.1.21.3/static-assets'
+      : IS_FASTGPT
+      ? '//' + location.hostname + ':8080'
+      : '/static-assets';
+  var PDF_BASE = IS_FASTGPT
+      ? '//' + location.hostname + ':8081/static-assets/archive/_unsorted/Library/'
+      : '/static-assets/archive/_unsorted/Library/';
+
+  // --- Parse URL params ---
+  var params = new URLSearchParams(location.search);
+  var paperId = params.get('paper_id');
+  var mode = params.get('mode') || 'full';
+  var showPdf = params.get('show_pdf') === '1';
+
+  if (mode === 'sidebar') document.body.classList.add('sidebar');
+
+  if (!paperId) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    document.getElementById('content').innerHTML =
+      '<div class="error"><div class="error-icon">&#9888;</div><strong>' + t('missingId') + '</strong><p class="error-msg">' + t('missingIdMsg') + '</p></div>';
+    return;
+  }
+
+  // --- Fetch paper ---
+  fetch(API_BASE + '/api/paper?paper_id=' + encodeURIComponent(paperId))
+    .then(function(r) {
+      if (!r.ok) throw new Error(r.status === 404 ? t('paperNotFound') : t('serverError'));
+      return r.json();
+    })
+    .then(function(paper) {
+      render(paper);
+      // Track view
+      try {
+        fetch(API_BASE + '/api/track-view', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paper_id: paperId, type: 'embed_preview' })
+        });
+      } catch(e) {}
+    })
+    .catch(function(err) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('content').style.display = 'block';
+      document.getElementById('content').innerHTML =
+        '<div class="error"><div class="error-icon">&#9888;</div><strong>' + t('paperNotFound') + '</strong><p class="error-msg">' + escapeHtml(err.message) + '</p></div>';
+    });
+
+  function escapeHtml(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function render(p) {
+    window._embedPaper = p; // store for re-render on lang switch
+    var html = '<div class="paper-card">';
+    // Header
+    html += '<div class="paper-header">';
+    html += '<div class="paper-title">' + escapeHtml(p.title || t('untitled')) + '</div>';
+    html += '<div class="paper-authors">' + escapeHtml((p.authors || []).join(', ') || t('unknownAuthors')) + '</div>';
+    html += '<div class="paper-meta">';
+    if (p.year) html += '<p><strong>' + t('year') + ':</strong> ' + p.year + '</p>';
+    if (p.venue) html += '<p><strong>' + t('venue') + ':</strong> ' + escapeHtml(p.venue) + '</p>';
+    if (p.doi) html += '<p><strong>' + t('doi') + ':</strong> ' + escapeHtml(p.doi) + '</p>';
+    html += '</div>';
+    if (p.tags && p.tags.length) {
+      html += '<div class="paper-tags">';
+      p.tags.forEach(function(tag) { html += '<span class="tag">' + escapeHtml(tag) + '</span>'; });
+      html += '</div>';
+    }
+    html += '</div>';
+    // Actions
+    html += '<div class="paper-actions">';
+    html += '<button class="btn btn-primary" aria-label="' + t('previewPdf') + '" onclick="togglePdf()">' + t('previewPdf') + '</button>';
+    if (p.file_path) {
+      html += '<a class="btn btn-outline" href="' + PDF_BASE + p.file_path + '" target="_blank" rel="noopener">' + t('downloadPdf') + '</a>';
+    }
+    html += '</div>';
+    // PDF viewer
+    html += '<div class="pdf-container" id="pdfContainer">';
+    html += '<iframe class="pdf-frame" id="pdfFrame" src=""></iframe>';
+    html += '</div>';
+    html += '</div>';
+
+    if (p.abstract) {
+      html += '<div class="paper-card" style="margin-top:1rem;">';
+      html += '<div class="paper-header"><p style="font-size:0.9rem;color:#718096;">' + escapeHtml(p.abstract).substring(0, 500) + (p.abstract.length > 500 ? '...' : '') + '</p></div>';
+      html += '</div>';
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    document.getElementById('content').innerHTML = html;
+
+    if (showPdf && p.file_path) {
+      document.getElementById('pdfContainer').classList.add('active');
+      document.getElementById('pdfFrame').src = PDF_BASE + p.file_path;
+    }
+  }
+
+  // Expose to global scope for inline onclick
+  window.togglePdf = function() {
+    var container = document.getElementById('pdfContainer');
+    var frame = document.getElementById('pdfFrame');
+    if (container.classList.contains('active')) {
+      container.classList.remove('active');
+      frame.src = '';
+    } else {
+      container.classList.add('active');
+      if (!frame.src || frame.src === 'about:blank') {
+        // Re-fetch paper to get file_path
+        fetch(API_BASE + '/api/paper?paper_id=' + encodeURIComponent(paperId))
+          .then(function(r) { return r.json(); })
+          .then(function(p) {
+            if (p.file_path) frame.src = PDF_BASE + p.file_path;
+          });
+      }
+    }
+  };
+
+  window.closePreview = function() {
+    window.parent.postMessage({ type: 'paper-preview-close' }, '*');
+  };
+})();
+</script>
+</body>
+</html>
