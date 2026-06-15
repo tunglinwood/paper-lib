@@ -1,4 +1,3 @@
-import { state } from '../state.js';
 import { escapeHtml } from '../utils/helpers.js';
 import { t } from '../i18n.js';
 

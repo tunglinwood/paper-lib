@@ -1,9 +1,9 @@
 import { state } from './state.js';
 import { fetchIndex, searchPapers } from './api.js';
-import { escapeHtml, formatSize } from './utils/helpers.js';
+import { formatSize } from './utils/helpers.js';
 import { renderPapers, goPage } from './render/papers.js';
 import { extractTopics, populateYearPills, updateYearPillUI, populateTopics } from './render/filters.js';
-import { loadTrending, trackAndRefresh } from './actions/views.js';
+import { loadTrending } from './actions/views.js';
 import { showModal, closeModal, setupPanelResize } from './render/modal.js';
 import { t, setLang, getCurrentLang, applyTranslations } from './i18n.js';
 import { initAgent } from './agent.js';

@@ -14,7 +14,6 @@ Usage:
     uv run python scripts/convert_papers_to_html.py --workers 32  # Use 32 workers
 """
 import argparse
-import os
 import shutil
 import sqlite3
 import subprocess

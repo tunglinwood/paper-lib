@@ -9,7 +9,6 @@ Usage:
     uv run python scripts/inject_text_fragment_support.py [--resume] [--workers N]
 """
 import argparse
-import re
 import sys
 from pathlib import Path
 
