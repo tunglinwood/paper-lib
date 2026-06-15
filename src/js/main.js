@@ -122,6 +122,12 @@ function setupEventDelegation() {
 
         switch (action) {
             case 'show-paper': e.preventDefault(); showPaper(id); break;
+            case 'view-html':
+                // For papers with HTML, the link has target="_blank" so browser handles it
+                // But we prevent default just in case and let the href work
+                e.preventDefault();
+                window.open(target.href, '_blank', 'noopener');
+                break;
         }
     });
 

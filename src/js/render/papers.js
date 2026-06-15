@@ -20,9 +20,13 @@ export function renderPapers() {
 
     container.innerHTML = pagePapers.map(paper => {
         const similarity = paper._similarity != null ? paper._similarity : null;
+        const hasHtml = !!paper.html_path;
+        const titleAction = hasHtml ? 'view-html' : 'show-paper';
+        const titleHref = hasHtml ? `/papers/${paper.paper_id}.html` : `#${paper.paper_id}`;
+        const titleTarget = hasHtml ? ' target="_blank" rel="noopener"' : '';
         return `
         <div class="paper-card" data-id="${paper.paper_id}">
-            <h3 class="paper-title"><a href="#${paper.paper_id}" data-action="show-paper" data-id="${paper.paper_id}">${escapeHtml(paper.title || 'Untitled')}</a></h3>
+            <h3 class="paper-title"><a href="${titleHref}"${titleTarget} data-action="${titleAction}" data-id="${paper.paper_id}">${escapeHtml(paper.title || 'Untitled')}</a></h3>
             <p class="paper-authors">${escapeHtml((paper.authors || []).join(', ') || t('unknownAuthors'))}</p>
             <div class="paper-meta">
                 ${paper.year ? `<span>📅 ${paper.year}</span>` : ''}
@@ -33,9 +37,6 @@ export function renderPapers() {
             <div class="paper-tags">
                 ${(paper.tags || []).slice(0, 5).map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}
             </div>
-            ${paper.html_path ? `<div class="paper-actions">
-    <a href="/papers/${paper.paper_id}.html" target="_blank" rel="noopener" data-action="view-html" class="action-btn html-btn">${t('viewHtml')}</a>
-</div>` : ''}
         </div>
     `}).join('');
 

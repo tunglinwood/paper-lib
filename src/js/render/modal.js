@@ -106,12 +106,19 @@ export function showModal(paper) {
     if (related.length) {
         relatedHtml = `<div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #f0f0f0;">
             <h3 style="margin-bottom:0.5rem;">${t('relatedPapers')}</h3>` +
-            related.map(p => `
-                <div style="padding:0.5rem;border-bottom:1px solid #f0f0f0;cursor:pointer;" data-action="show-paper" data-id="${p.paper_id}">
-                    <strong>${escapeHtml(p.title || t('untitled'))}</strong>
-                    <div style="font-size:0.85rem;color:#666;">${(p.authors || []).join(', ') || t('unknownAuthors')}</div>
-                </div>
-            `).join('') + `</div>`;
+            related.map(p => {
+                const hasHtml = !!p.html_path;
+                const action = hasHtml ? 'view-html' : 'show-paper';
+                const href = hasHtml ? `/papers/${p.paper_id}.html` : `#${p.paper_id}`;
+                const target = hasHtml ? ' target="_blank" rel="noopener"' : '';
+                return `
+                <div style="padding:0.5rem;border-bottom:1px solid #f0f0f0;cursor:pointer;" data-action="${action}" data-id="${p.paper_id}">
+                    <a href="${href}"${target} style="text-decoration:none;color:inherit;display:block;">
+                        <strong>${escapeHtml(p.title || t('untitled'))}</strong>
+                        <div style="font-size:0.85rem;color:#666;">${(p.authors || []).join(', ') || t('unknownAuthors')}</div>
+                    </a>
+                </div>`;
+            }).join('') + `</div>`;
     } else {
         relatedHtml = `<div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #f0f0f0;">
             <h3 style="margin-bottom:0.5rem;">${t('relatedPapers')}</h3>
