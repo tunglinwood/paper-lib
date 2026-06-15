@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Fragment Demo - Paper Library</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #2563eb;
+        }
+        .demo-box {
+            background: #f0f9ff;
+            border: 2px solid #2563eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .demo-link {
+            display: inline-block;
+            background: #2563eb;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            margin: 10px 5px;
+            transition: background 0.2s;
+        }
+        .demo-link:hover {
+            background: #1d4ed8;
+        }
+        code {
+            background: #e5e7eb;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        .instructions {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        ol {
+            padding-left: 25px;
+        }
+        li {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>📚 Text Fragment Support Demo</h1>
+
+    <div class="demo-box">
+        <h2>Try It Out!</h2>
+        <p>Click any of these links to see text highlighting in action:</p>
+
+        <p>
+            <a href="/papers/sha256_01db7e8ca3ba3bbbd16765eba950300511c92e9bc2e090d990e297c5928132a2.html#:~:text=concentratio" class="demo-link" target="_blank">
+                Page 3: "concentratio"
+            </a>
+        </p>
+
+        <p>
+            <a href="/papers/sha256_01db7e8ca3ba3bbbd16765eba950300511c92e9bc2e090d990e297c5928132a2.html#:~:text=glucokinase" class="demo-link" target="_blank">
+                Page 1: "glucokinase"
+            </a>
+        </p>
+
+        <p>
+            <a href="/papers/sha256_01db7e8ca3ba3bbbd16765eba950300511c92e9bc2e090d990e297c5928132a2.html#:~:text=diabetes" class="demo-link" target="_blank">
+                Page 5: "diabetes"
+            </a>
+        </p>
+    </div>
+
+    <div class="instructions">
+        <h3>📖 How to Use</h3>
+        <ol>
+            <li><strong>Select text</strong> in any paper HTML page</li>
+            <li><strong>Copy the URL</strong> from your browser's address bar</li>
+            <li><strong>Share the link</strong> with others</li>
+            <li>When they click it, the page will <strong>automatically scroll</strong> to that text and <strong>highlight it</strong> in yellow</li>
+        </ol>
+    </div>
+
+    <h2>🔧 How It Works</h2>
+    <p>
+        Modern browsers support the <a href="https://wicg.github.io/scroll-to-text-fragment/" target="_blank">Text Fragments API</a>,
+        which allows URLs to include text directives like:
+    </p>
+    <p>
+        <code>paper.html#:~:text=selected%20text</code>
+    </p>
+    <p>
+        We've enhanced the pdf2htmlEX-generated HTML files with custom JavaScript that makes this work even for text on pages 2, 3, 4, etc.
+        (which normally wouldn't work because of the custom scroll container).
+    </p>
+
+    <h2>✅ Browser Support</h2>
+    <ul>
+        <li>✅ Chrome 80+</li>
+        <li>✅ Edge 80+</li>
+        <li>✅ Safari 15.4+</li>
+        <li>🔄 Firefox (in development, but our custom JS still works)</li>
+    </ul>
+
+    <h2>📊 Statistics</h2>
+    <ul>
+        <li><strong>352 HTML files</strong> updated with Text Fragment support</li>
+        <li><strong>355 total papers</strong> in the library</li>
+        <li><strong>99% coverage</strong> of papers with HTML equivalents</li>
+    </ul>
+
+    <div class="demo-box">
+        <h3>🎯 Test Case</h3>
+        <p>Try this multi-page paper:</p>
+        <p>
+            <a href="/papers/sha256_29d3629fb09cd16e6294053de49ccc37df82e00bfacdbf04721ceec79f3b05b6.html" class="demo-link" target="_blank">
+                Open Paper (9 pages)
+            </a>
+        </p>
+        <p>Then:</p>
+        <ol>
+            <li>Scroll to page 5</li>
+            <li>Select some text</li>
+            <li>Copy the URL</li>
+            <li>Open in a new tab — it should scroll back to your selection!</li>
+        </ol>
+    </div>
+
+    <hr>
+    <p style="color: #6b7280; font-size: 0.9em;">
+        See <a href="/TEXT_FRAGMENT_SUPPORT.md">TEXT_FRAGMENT_SUPPORT.md</a> for technical details.
+    </p>
+</body>
+</html>
