@@ -30,18 +30,62 @@ TEXT_FRAGMENT_JS = """
     function initTextFragmentSupport() {
         const hash = window.location.hash;
         if (!hash.includes(':~:text=')) return;
-        const textFragment = decodeURIComponent(hash.split(':~:text=')[1]);
-        if (!textFragment) return;
-        console.log('[Text Fragment] Looking for:', textFragment);
-        const range = findTextInDocument(textFragment);
+        const textFragmentStr = decodeURIComponent(hash.split(':~:text=')[1]);
+        if (!textFragmentStr) return;
+        console.log('[Text Fragment] Looking for:', textFragmentStr);
+        const parsed = parseTextFragment(textFragmentStr);
+        console.log('[Text Fragment] Parsed:', parsed);
+        const range = findTextInDocument(parsed);
         if (!range) {
-            console.warn('[Text Fragment] Text not found:', textFragment);
+            console.warn('[Text Fragment] Text not found:', textFragmentStr);
             return;
         }
         scrollToRange(range);
         highlightRange(range);
     }
-    function findTextInDocument(searchText) {
+    function parseTextFragment(str) {
+        // Syntax: [prefix-,]textStart[,textEnd][,-suffix]
+        const parts = str.split(',');
+        let prefix = null, textStart = null, textEnd = null, suffix = null;
+        if (parts.length === 1) {
+            textStart = parts[0];
+        } else if (parts.length === 2) {
+            if (parts[0].endsWith('-')) {
+                prefix = parts[0].slice(0, -1);
+                textStart = parts[1];
+            } else if (parts[1].startsWith('-')) {
+                textStart = parts[0];
+                suffix = parts[1].slice(1);
+            } else {
+                textStart = parts[0];
+                textEnd = parts[1];
+            }
+        } else if (parts.length === 3) {
+            if (parts[0].endsWith('-')) {
+                prefix = parts[0].slice(0, -1);
+                if (parts[2].startsWith('-')) {
+                    textStart = parts[1];
+                    suffix = parts[2].slice(1);
+                } else {
+                    textStart = parts[1];
+                    textEnd = parts[2];
+                }
+            } else {
+                textStart = parts[0];
+                textEnd = parts[1];
+                if (parts[2].startsWith('-')) {
+                    suffix = parts[2].slice(1);
+                }
+            }
+        } else if (parts.length === 4) {
+            prefix = parts[0].endsWith('-') ? parts[0].slice(0, -1) : parts[0];
+            textStart = parts[1];
+            textEnd = parts[2];
+            suffix = parts[3].startsWith('-') ? parts[3].slice(1) : parts[3];
+        }
+        return { prefix, textStart, textEnd: textEnd || textStart, suffix };
+    }
+    function findTextInDocument(parsed) {
         const treeWalker = document.createTreeWalker(
             document.querySelector('#page-container') || document.body,
             NodeFilter.SHOW_TEXT, null, false
@@ -54,22 +98,52 @@ TEXT_FRAGMENT_JS = """
                 textContent += text + ' ';
             }
         }
-        const searchLower = searchText.toLowerCase();
         const textLower = textContent.toLowerCase();
-        const matchIndex = textLower.indexOf(searchLower);
-        if (matchIndex === -1) return null;
-        const matchEnd = matchIndex + searchText.length;
+        const searchStart = parsed.textStart.toLowerCase();
+        const searchEnd = parsed.textEnd.toLowerCase();
+        let startIndex = textLower.indexOf(searchStart);
+        while (startIndex !== -1) {
+            if (parsed.prefix) {
+                const prefixLower = parsed.prefix.toLowerCase();
+                const beforeText = textLower.substring(Math.max(0, startIndex - 50), startIndex).trim();
+                if (!beforeText.endsWith(prefixLower)) {
+                    startIndex = textLower.indexOf(searchStart, startIndex + 1);
+                    continue;
+                }
+            }
+            let endIndex = -1;
+            if (parsed.textEnd && parsed.textEnd !== parsed.textStart) {
+                endIndex = textLower.indexOf(searchEnd, startIndex + searchStart.length);
+                if (endIndex === -1) {
+                    startIndex = textLower.indexOf(searchStart, startIndex + 1);
+                    continue;
+                }
+                endIndex += searchEnd.length;
+            } else {
+                endIndex = startIndex + searchStart.length;
+            }
+            if (parsed.suffix) {
+                const suffixLower = parsed.suffix.toLowerCase();
+                const afterText = textLower.substring(endIndex, endIndex + 50).trim();
+                if (!afterText.startsWith(suffixLower)) {
+                    startIndex = textLower.indexOf(searchStart, startIndex + 1);
+                    continue;
+                }
+            }
+            break;
+        }
+        if (startIndex === -1) return null;
         let startNode = null, startOffset = 0, endNode = null, endOffset = 0;
         for (let i = 0; i < textNodes.length; i++) {
-            const {node, text, startIndex} = textNodes[i];
-            const endIndex = startIndex + text.length;
-            if (!startNode && startIndex <= matchIndex && endIndex > matchIndex) {
+            const {node, text, startIndex: nodeStart} = textNodes[i];
+            const nodeEnd = nodeStart + text.length;
+            if (!startNode && nodeStart <= startIndex && nodeEnd > startIndex) {
                 startNode = node;
-                startOffset = matchIndex - startIndex;
+                startOffset = startIndex - nodeStart;
             }
-            if (!endNode && startIndex < matchEnd && endIndex >= matchEnd) {
+            if (!endNode && nodeStart < endIndex && nodeEnd >= endIndex) {
                 endNode = node;
-                endOffset = matchEnd - startIndex;
+                endOffset = endIndex - nodeStart;
                 break;
             }
         }
