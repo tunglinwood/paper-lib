@@ -1,8 +1,12 @@
+const path = require('path');
+
+const CWD = path.resolve(__dirname);
+
 module.exports = {
   apps: [
     {
       name: 'paper-lib-backend',
-      cwd: '/home/huapad/paper-lib',
+      cwd: CWD,
       script: 'run-backend.sh',
       interpreter: 'bash',
       env: {
@@ -16,11 +20,13 @@ module.exports = {
     },
     {
       name: 'paper-lib-frontend',
-      cwd: '/home/huapad/paper-lib',
+      cwd: CWD,
       script: 'run-frontend.sh',
       interpreter: 'bash',
       env: {
-        NODE_ENV: 'development'
+        NODE_ENV: 'development',
+        API_TARGET: 'http://10.8.8.28:9000',
+        PORT: '80'
       },
       autorestart: true,
       max_restarts: 999,
