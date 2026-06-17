@@ -22,6 +22,7 @@ from auth import (
     get_user_by_username,
     verify_password,
     create_access_token,
+    create_user,
     get_current_user,
     require_user,
     require_admin,
@@ -261,6 +262,45 @@ async def api_me(user: dict = Depends(get_current_user)):
     if not user:
         return {"user": None}
     return {"user": user}
+
+
+@app.post("/api/auth/register")
+async def api_register(request: Request):
+    """Register a new regular user account."""
+    body = await request.json()
+    username = body.get("username", "").strip()
+    password = body.get("password", "")
+    email = body.get("email", "").strip()
+
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="用户名和密码不能为空")
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="密码长度至少为 6 位")
+
+    result = create_user(username, password, email, is_admin=False)
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["error"])
+
+    user = get_user_by_id(result["user_id"])
+    token = create_access_token(user["id"], user["username"], bool(user["is_admin"]))
+    response = JSONResponse({
+        "success": True,
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "username": user["username"],
+            "email": user["email"],
+            "is_admin": bool(user["is_admin"]),
+        },
+    })
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        max_age=60 * 60 * 24,
+        samesite="lax",
+    )
+    return response
 
 
 @app.post("/api/auth/logout")

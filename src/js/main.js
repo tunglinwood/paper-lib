@@ -252,7 +252,7 @@ function setupAuthUI() {
     authBtn.addEventListener('click', async () => {
         if (isLoggedIn()) {
             await logout();
-            updateUI();
+            window.location.href = '/login';
         } else {
             window.location.href = '/login';
         }

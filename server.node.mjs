@@ -132,6 +132,20 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (url.pathname === "/login" || url.pathname === "/login/") {
+      const loginFile = path.join(__dirname, "login.html");
+      if (fs.existsSync(loginFile)) {
+        serveFile(res, loginFile);
+        return;
+      }
+    }
+
+    if (url.pathname === "/login.html") {
+      res.writeHead(301, { Location: "/login" });
+      res.end();
+      return;
+    }
+
     const filePath = path.join(__dirname, url.pathname === "/" ? "index.html" : url.pathname);
     const resolvedPath = path.resolve(filePath);
     const rootPath = path.resolve(__dirname);
