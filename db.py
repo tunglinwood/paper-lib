@@ -48,6 +48,18 @@ CREATE TABLE IF NOT EXISTS views (
 
 CREATE INDEX IF NOT EXISTS idx_views_paper_id ON views(paper_id);
 CREATE INDEX IF NOT EXISTS idx_views_ts ON views(ts);
+
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    email TEXT,
+    is_admin INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 """
 
 

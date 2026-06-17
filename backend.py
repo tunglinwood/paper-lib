@@ -13,11 +13,19 @@ from typing import Optional
 
 import aiohttp
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, UploadFile, File, HTTPException, Query
+from fastapi import FastAPI, Request, UploadFile, File, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, JSONResponse
 
 from db import get_db, init_db, row_to_dict
+from auth import (
+    get_user_by_username,
+    verify_password,
+    create_access_token,
+    get_current_user,
+    require_admin,
+    ensure_default_admin,
+)
 
 load_dotenv()
 
@@ -75,6 +83,7 @@ MIME_TYPES = {
 
 # --- Init DB on startup ---
 init_db()
+ensure_default_admin()
 
 # --- Crawl Locks ---
 crawl_locks: dict[str, asyncio.Lock] = {}
@@ -203,6 +212,62 @@ async def list_papers():
     finally:
         conn.close()
     return [row_to_dict(r) for r in rows]
+
+
+# --- Auth API ---
+
+@app.post("/api/auth/login")
+async def api_login(request: Request):
+    """Authenticate a user and return a JWT access token."""
+    body = await request.json()
+    username = body.get("username", "").strip()
+    password = body.get("password", "")
+
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Username and password are required")
+
+    user = get_user_by_username(username)
+    if not user or not verify_password(password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    from auth import update_last_login
+    update_last_login(user["id"])
+
+    token = create_access_token(user["id"], user["username"], bool(user["is_admin"]))
+    response = JSONResponse({
+        "success": True,
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "username": user["username"],
+            "email": user["email"],
+            "is_admin": bool(user["is_admin"]),
+        },
+    })
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        max_age=60 * 60 * 24,
+        samesite="lax",
+    )
+    return response
+
+
+@app.get("/api/auth/me")
+async def api_me(user: dict = Depends(get_current_user)):
+    """Return the currently authenticated user, or null."""
+    if not user:
+        return {"user": None}
+    return {"user": user}
+
+
+@app.post("/api/auth/logout")
+async def api_logout():
+    """Logout by clearing the auth cookie."""
+    response = JSONResponse({"success": True})
+    response.delete_cookie(key="access_token")
+    return response
 
 
 # --- Search API ---
@@ -334,7 +399,7 @@ async def search_papers(
 # --- Admin API Routes ---
 
 @app.post("/api/admin/delete-papers")
-async def delete_papers(request: Request):
+async def delete_papers(request: Request, admin_user: dict = Depends(require_admin)):
     body = await request.json()
     paper_ids = body.get("paper_ids")
     if not paper_ids or not isinstance(paper_ids, list):
@@ -376,7 +441,7 @@ async def delete_papers(request: Request):
     return {"ok": True, "deleted": len(paper_ids)}
 
 @app.post("/api/admin/update-paper")
-async def update_paper(request: Request):
+async def update_paper(request: Request, admin_user: dict = Depends(require_admin)):
     body = await request.json()
     paper_id = body.get("paper_id")
     updates = body.get("updates")
@@ -414,7 +479,7 @@ async def update_paper(request: Request):
     return {"ok": True}
 
 @app.post("/api/admin/crawl-pdf")
-async def crawl_pdf(request: Request):
+async def crawl_pdf(request: Request, admin_user: dict = Depends(require_admin)):
     body = await request.json()
     paper_id = body.get("paper_id")
     if not paper_id:
@@ -493,7 +558,7 @@ async def crawl_pdf(request: Request):
         return {"ok": True, "metadata": result.get("metadata")}
 
 @app.post("/api/admin/fetch-metadata")
-async def fetch_metadata(request: Request):
+async def fetch_metadata(request: Request, admin_user: dict = Depends(require_admin)):
     body = await request.json()
     url = body.get("url")
     if not url:
@@ -510,7 +575,7 @@ async def fetch_metadata(request: Request):
         raise HTTPException(status_code=500, detail="Invalid JSON from metadata extractor")
 
 @app.post("/api/admin/extract-pdf-metadata")
-async def extract_pdf_metadata(request: Request):
+async def extract_pdf_metadata(request: Request, admin_user: dict = Depends(require_admin)):
     body = await request.json()
     pdf_base64 = body.get("pdf_base64")
     if not pdf_base64:
@@ -689,7 +754,7 @@ def insert_papers(papers: list[dict]):
         conn.close()
 
 @app.post("/api/admin/check-duplicates")
-async def check_duplicates(request: Request):
+async def check_duplicates(request: Request, admin_user: dict = Depends(require_admin)):
     """Check which paper_ids already exist in the library."""
     body = await request.json()
     paper_ids = body.get("paper_ids", [])
@@ -707,7 +772,7 @@ async def check_duplicates(request: Request):
         conn.close()
 
 @app.post("/api/admin/upload")
-async def upload(request: Request, file: Optional[UploadFile] = File(None)):
+async def upload(request: Request, file: Optional[UploadFile] = File(None), admin_user: dict = Depends(require_admin)):
     content_type = request.headers.get("content-type", "")
     if content_type.startswith("multipart/form-data"):
         # Multipart form upload
@@ -772,7 +837,7 @@ async def upload(request: Request, file: Optional[UploadFile] = File(None)):
         }
 
 @app.post("/api/admin/upload-and-crawl")
-async def upload_and_crawl(file: UploadFile = File(...)):
+async def upload_and_crawl(file: UploadFile = File(...), admin_user: dict = Depends(require_admin)):
     """Upload a single PDF, convert to HTML, extract metadata from HTML, return for review (no DB insert)."""
     file_data = await file.read()
     if not file_data:
@@ -877,7 +942,7 @@ async def upload_and_crawl(file: UploadFile = File(...)):
     }
 
 @app.post("/api/admin/confirm-papers")
-async def confirm_papers(request: Request):
+async def confirm_papers(request: Request, admin_user: dict = Depends(require_admin)):
     """Commit reviewed paper records into the database."""
     body = await request.json()
     papers = body.get("papers", [])
@@ -927,7 +992,7 @@ async def confirm_papers(request: Request):
 # --- HTML Generation ---
 
 @app.post("/api/admin/generate-html")
-async def generate_html(request: Request):
+async def generate_html(request: Request, admin_user: dict = Depends(require_admin)):
     """Convert a single paper's PDF to HTML via pdf2htmlEX Docker."""
     body = await request.json()
     paper_id = body.get("paper_id")
@@ -1025,6 +1090,18 @@ async def serve_admin():
 @app.get("/admin.html")
 async def serve_admin_html():
     return RedirectResponse(url="/admin", status_code=301)
+
+@app.get("/login")
+@app.get("/login/")
+async def serve_login():
+    file_path = ROOT / "login.html"
+    if file_path.is_file():
+        return FileResponse(str(file_path), media_type="text/html")
+    raise HTTPException(status_code=404, detail="Not Found")
+
+@app.get("/login.html")
+async def serve_login_html():
+    return RedirectResponse(url="/login", status_code=301)
 
 # --- HTML Paper Serving ---
 HTML_PAPER_DIR = ROOT / "archive" / "_unsorted" / "Library" / "01_curated" / "html"

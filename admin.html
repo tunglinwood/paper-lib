@@ -14,9 +14,16 @@
     <link rel="stylesheet" href="src/css/admin.css">
 </head>
 <body>
-    <div class="header admin-header">
-        <h1>Admin Dashboard</h1>
-        <p>Manage papers, PDFs &amp; metadata</p>
+    <div class="header admin-header" style="justify-content:space-between;">
+        <div>
+            <h1>Admin Dashboard</h1>
+            <p>Manage papers, PDFs &amp; metadata</p>
+        </div>
+        <div class="header-actions" style="display:flex;gap:0.5rem;align-items:center;">
+            <span id="authUser" style="color:#fff;font-size:0.9rem;"></span>
+            <a class="action-btn ghost" href="/" style="color:#fff;border-color:#fff;">Public Site</a>
+            <button class="action-btn ghost" id="logoutBtn" style="color:#fff;border-color:#fff;">Logout</button>
+        </div>
     </div>
 
     <div class="search-container">
@@ -244,8 +251,10 @@
     </div>
 
     <script type="module">
-        import { init } from './src/js/admin.js';
-        init();
+        import { requireAdmin } from './src/js/auth.js';
+        if (requireAdmin()) {
+            import('./src/js/admin.js').then(({ init }) => init());
+        }
     </script>
 </body>
 </html>

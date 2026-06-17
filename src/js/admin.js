@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { fetchIndex, searchPapers, deletePapers, updatePaper, crawlPdfMetadata, generateHtml, uploadAndCrawl, confirmPapers, PDF_BASE } from './api.js';
 import { escapeHtml, formatSize } from './utils/helpers.js';
 import { setupPanelResize } from './render/modal.js';
+import { getUser, logout, fetchCurrentUser } from './auth.js';
 
 // --- Data loading ---
 async function loadPapersData() {
@@ -831,4 +832,23 @@ export async function init() {
     searchAndRender();
     setupEvents();
     setupPanelResize();
+    setupAuthBar();
+}
+
+function setupAuthBar() {
+    const userEl = document.getElementById('authUser');
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (userEl) {
+        const user = getUser();
+        userEl.textContent = user ? `👤 ${escapeHtml(user.username)}` : '';
+    }
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            await logout();
+            window.location.href = '/login.html';
+        });
+    }
+    fetchCurrentUser().then(user => {
+        if (userEl && user) userEl.textContent = `👤 ${escapeHtml(user.username)}`;
+    }).catch(() => {});
 }

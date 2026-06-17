@@ -100,6 +100,12 @@ ALLOWED_ORIGINS=http://your-frontend-domain.com,https://your-frontend-domain.com
 # Server Configuration
 HOST=0.0.0.0
 PORT=9000
+
+# Authentication (REQUIRED for admin access)
+JWT_SECRET=change-me-in-production-to-a-long-random-string
+JWT_EXPIRY_HOURS=24
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=change-me-in-production
 ```
 
 ### 3. Update CORS Settings

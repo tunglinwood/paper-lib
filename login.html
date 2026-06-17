@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Paper Library</title>
+    <link rel="stylesheet" href="src/css/base.css">
+    <link rel="stylesheet" href="src/css/layout.css">
+    <link rel="stylesheet" href="src/css/header.css">
+    <style>
+        .login-container {
+            max-width: 400px;
+            margin: 4rem auto;
+            padding: 2rem;
+            background: var(--card-bg, #fff);
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+        .login-container h1 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: var(--primary-color, #2563eb);
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-weight: 500;
+            color: var(--text-color, #333);
+        }
+        .form-group input {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: 1px solid var(--border-color, #ddd);
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color, #2563eb);
+        }
+        .login-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--primary-color, #2563eb);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }
+        .login-btn:hover {
+            opacity: 0.92;
+        }
+        .login-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+        .error-message {
+            color: #dc2626;
+            margin-top: 0.75rem;
+            text-align: center;
+            min-height: 1.25rem;
+        }
+        .login-hint {
+            margin-top: 1.5rem;
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-text">
+            <h1>Paper Library</h1>
+            <p>Research Archive - Search, Browse &amp; Export</p>
+        </div>
+    </div>
+
+    <div class="login-container">
+        <h1>Admin Login</h1>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required autofocus autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="login-btn" id="submitBtn">Login</button>
+            <div class="error-message" id="errorMessage"></div>
+        </form>
+        <div class="login-hint">
+            Default admin: <code>admin / admin</code><br>
+            Change via <code>ADMIN_USERNAME</code> and <code>ADMIN_PASSWORD</code> env vars.
+        </div>
+    </div>
+
+    <script type="module">
+        import { login } from './src/js/auth.js';
+
+        const form = document.getElementById('loginForm');
+        const errorMessage = document.getElementById('errorMessage');
+        const submitBtn = document.getElementById('submitBtn');
+        const urlParams = new URLSearchParams(window.location.search);
+        const next = urlParams.get('next') || '/admin';
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMessage.textContent = '';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Logging in...';
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            try {
+                const data = await login(username, password);
+                if (data.user && data.user.is_admin) {
+                    window.location.href = next;
+                } else {
+                    errorMessage.textContent = 'Admin access required';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Login';
+                }
+            } catch (err) {
+                errorMessage.textContent = err.message || 'Login failed';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Login';
+            }
+        });
+    </script>
+</body>
+</html>

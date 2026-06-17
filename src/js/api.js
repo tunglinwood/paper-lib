@@ -3,6 +3,8 @@
 // API_BASE is empty string — all API calls use relative paths (/api/*).
 // When served via Bun dev server: API requests are proxied to backend (:8000).
 // When served directly by backend (FastAPI): API routes are on same origin.
+import { apiFetch } from './auth.js';
+
 export const API_BASE = '';
 export const PDF_BASE = '/archive/_unsorted/Library/';
 
@@ -27,7 +29,7 @@ export async function fetchRankings(windowDays = '7') {
 }
 
 export async function deletePapers(paperIds) {
-    const resp = await fetch(`${API_BASE}/api/admin/delete-papers`, {
+    const resp = await apiFetch(`${API_BASE}/api/admin/delete-papers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paper_ids: paperIds }),
@@ -36,7 +38,7 @@ export async function deletePapers(paperIds) {
 }
 
 export async function updatePaper(paperId, updates) {
-    const resp = await fetch(`${API_BASE}/api/admin/update-paper`, {
+    const resp = await apiFetch(`${API_BASE}/api/admin/update-paper`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paper_id: paperId, updates }),
@@ -45,7 +47,7 @@ export async function updatePaper(paperId, updates) {
 }
 
 export async function crawlPdfMetadata(paperId) {
-    const resp = await fetch(`${API_BASE}/api/admin/crawl-pdf`, {
+    const resp = await apiFetch(`${API_BASE}/api/admin/crawl-pdf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paper_id: paperId }),
@@ -54,7 +56,7 @@ export async function crawlPdfMetadata(paperId) {
 }
 
 export async function generateHtml(paperId) {
-    const resp = await fetch(`${API_BASE}/api/admin/generate-html`, {
+    const resp = await apiFetch(`${API_BASE}/api/admin/generate-html`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paper_id: paperId }),
@@ -83,7 +85,7 @@ export async function searchPapers(params = {}) {
 export async function uploadAndCrawl(file) {
     const form = new FormData();
     form.append('file', file);
-    const resp = await fetch(`${API_BASE}/api/admin/upload-and-crawl`, {
+    const resp = await apiFetch(`${API_BASE}/api/admin/upload-and-crawl`, {
         method: 'POST',
         body: form,
     });
@@ -91,10 +93,37 @@ export async function uploadAndCrawl(file) {
 }
 
 export async function confirmPapers(papers) {
-    const resp = await fetch(`${API_BASE}/api/admin/confirm-papers`, {
+    const resp = await apiFetch(`${API_BASE}/api/admin/confirm-papers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ papers }),
+    });
+    return resp.json();
+}
+
+export async function checkDuplicates(paperIds) {
+    const resp = await apiFetch(`${API_BASE}/api/admin/check-duplicates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paper_ids: paperIds }),
+    });
+    return resp.json();
+}
+
+export async function fetchMetadata(url) {
+    const resp = await apiFetch(`${API_BASE}/api/admin/fetch-metadata`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+    });
+    return resp.json();
+}
+
+export async function extractPdfMetadata(base64) {
+    const resp = await apiFetch(`${API_BASE}/api/admin/extract-pdf-metadata`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdf_base64: base64 }),
     });
     return resp.json();
 }

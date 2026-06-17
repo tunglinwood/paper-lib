@@ -7,6 +7,7 @@ import { loadTrending } from './actions/views.js';
 import { showModal, closeModal, setupPanelResize } from './render/modal.js';
 import { t, setLang, getCurrentLang, applyTranslations } from './i18n.js';
 import { initAgent } from './agent.js';
+import { fetchCurrentUser, logout, isLoggedIn, isAdmin } from './auth.js';
 
 // --- Data loading & initialization ---
 async function loadStats() {
@@ -212,6 +213,7 @@ function searchByTopic(topic) {
 
 // --- Initialize ---
 export async function init() {
+    setupAuthUI();
     try {
         await loadStats();
         applyTranslations();
@@ -228,6 +230,35 @@ export async function init() {
     window.addEventListener('hashchange', handleHash);
     handleHash();
     await initAgent();
+}
+
+function setupAuthUI() {
+    const authBtn = document.getElementById('authBtn');
+    const adminLink = document.getElementById('adminLink');
+    if (!authBtn) return;
+
+    const updateUI = () => {
+        if (isLoggedIn()) {
+            authBtn.textContent = 'Logout';
+            authBtn.style.display = 'inline-block';
+            adminLink.style.display = isAdmin() ? 'inline-block' : 'none';
+        } else {
+            authBtn.textContent = 'Login';
+            authBtn.style.display = 'inline-block';
+            adminLink.style.display = 'none';
+        }
+    };
+
+    authBtn.addEventListener('click', async () => {
+        if (isLoggedIn()) {
+            await logout();
+            updateUI();
+        } else {
+            window.location.href = '/login.html';
+        }
+    });
+
+    fetchCurrentUser().then(updateUI).catch(updateUI);
 }
 
 function setupLangToggle() {
