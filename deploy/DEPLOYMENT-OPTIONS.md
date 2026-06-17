@@ -12,6 +12,7 @@ This folder contains everything needed for distributed deployment of the Paper L
 | **backend.env.example** | Environment configuration template for backend |
 | **nginx-frontend.conf** | Production nginx configuration for frontend |
 | **server.distributed.mjs** | Bun dev server variant for remote backend |
+| **server.node.mjs** | Node.js static server + API proxy (Bun-free, PM2-friendly) |
 | **setup-backend.sh** | Automated backend setup script |
 | **setup-frontend.sh** | Automated frontend setup script |
 
@@ -46,18 +47,34 @@ rsync -av user@backend:/path/to/paper-lib/{index.html,admin.html,embed.html,src}
 bun run --hot deploy/server.distributed.mjs
 ```
 
+### Option C: Node.js + PM2 (No Bun required)
+
+```bash
+# 1. Copy frontend files
+rsync -av user@backend:/path/to/paper-lib/{index.html,admin.html,embed.html,src,server.node.mjs,ecosystem.config.cjs,run-frontend.sh} .
+
+# 2. Update API_TARGET in run-frontend.sh or ecosystem.config.cjs
+#    Example: API_TARGET=http://backend-server:9000
+
+# 3. Start with PM2
+pm2 start ecosystem.config.cjs --only paper-lib-frontend
+```
+
+Access at `http://frontend-server:80` (or the configured `PORT`).
+
 ## Architecture
 
 ```
 Frontend Machine              Backend Machine
 ┌─────────────────┐          ┌─────────────────┐
-│  Nginx or Bun   │          │  FastAPI        │
-│  (:80/443)      │─────────>│  (:9000)        │
-│                 │  HTTP    │                 │
-│  Static files:  │  /api/*  │  SQLite DB      │
-│  - HTML         │          │  - papers.db    │
-│  - JS/CSS       │          │                 │
-│  - Papers HTML  │          │  Python scripts │
+│  Nginx / Bun /  │          │  FastAPI        │
+│  Node.js+PM2    │─────────>│  (:9000)        │
+│  (:80/443)      │  HTTP    │                 │
+│                 │  /api/*  │  SQLite DB      │
+│  Static files:  │          │  - papers.db    │
+│  - HTML         │          │                 │
+│  - JS/CSS       │          │  Python scripts │
+│  - Papers HTML  │          │                 │
 └─────────────────┘          └─────────────────┘
 ```
 
@@ -102,7 +119,14 @@ Or use env var: `API_TARGET=http://backend:9000 bun run server.distributed.mjs`
 - **Backend**: FastAPI on port 9000
 - **Config**: `deploy/server.distributed.mjs`
 
-### Option C: Backend Only (Simplest)
+### Option C: Node.js + PM2 (Bun-free)
+
+- **Frontend**: Node.js static server managed by PM2
+- **Backend**: FastAPI on port 9000
+- **Config**: `server.node.mjs`, `ecosystem.config.cjs`, `run-frontend.sh`
+- **Port**: defaults to `80` (set `PORT` env var to change)
+
+### Option D: Backend Only (Simplest)
 
 - **Frontend + Backend**: Both on same machine, backend serves everything
 - **No changes needed** — this is the current default setup

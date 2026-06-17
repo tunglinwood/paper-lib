@@ -263,6 +263,57 @@ bun run --hot server.distributed.mjs
 
 Access at `http://frontend-server:5173`
 
+### Option C: Node.js + PM2 (Bun-free)
+
+Use this when Bun is not installed on the frontend machine.
+
+#### 1. Copy Frontend Files
+
+```bash
+# On frontend machine
+mkdir -p /var/www/paper-lib
+cd /var/www/paper-lib
+
+rsync -av user@backend:/path/to/paper-lib/index.html .
+rsync -av user@backend:/path/to/paper-lib/admin.html .
+rsync -av user@backend:/path/to/paper-lib/embed.html .
+rsync -av user@backend:/path/to/paper-lib/src/ ./src/
+rsync -av user@backend:/path/to/paper-lib/server.node.mjs .
+rsync -av user@backend:/path/to/paper-lib/ecosystem.config.cjs .
+rsync -av user@backend:/path/to/paper-lib/run-frontend.sh .
+```
+
+#### 2. Configure Backend URL
+
+Edit `run-frontend.sh` or `ecosystem.config.cjs`:
+
+```bash
+export API_TARGET="${API_TARGET:-http://backend-server-ip:9000}"
+```
+
+Set the `PORT` env var if you want something other than `80`:
+
+```bash
+export PORT="${PORT:-80}"
+```
+
+#### 3. Allow Node.js to Bind to Port 80
+
+Port 80 is privileged. Either run PM2 as root, or grant the Node.js binary `CAP_NET_BIND_SERVICE`:
+
+```bash
+sudo setcap cap_net_bind_service=+ep $(readlink -f $(which node))
+```
+
+#### 4. Start with PM2
+
+```bash
+pm2 start ecosystem.config.cjs --only paper-lib-frontend
+pm2 save
+```
+
+Access at `http://frontend-server:80`.
+
 ---
 
 ## Configuration Files
