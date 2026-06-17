@@ -156,6 +156,10 @@ curl http://localhost:9000/api/papers | head -c 200
 # Should return JSON array of papers
 ```
 
+### 7. Restore Paper Data (Optional)
+
+If you are deploying from a release that includes the paper archive (PDFs, HTML conversions, and `papers.db`), follow [`DATA-RESTORE.md`](./DATA-RESTORE.md) to download and load the data.
+
 ---
 
 ## Frontend Deployment

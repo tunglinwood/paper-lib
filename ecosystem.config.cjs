@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'paper-lib-backend',
-      cwd: '/root/huamedicine/paper-lib',
+      cwd: '/home/huapad/paper-lib',
       script: 'run-backend.sh',
       interpreter: 'bash',
       env: {
@@ -16,7 +16,7 @@ module.exports = {
     },
     {
       name: 'paper-lib-frontend',
-      cwd: '/root/huamedicine/paper-lib',
+      cwd: '/home/huapad/paper-lib',
       script: 'run-frontend.sh',
       interpreter: 'bash',
       env: {

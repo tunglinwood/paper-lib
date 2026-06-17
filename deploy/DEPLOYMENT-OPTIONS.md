@@ -8,6 +8,7 @@ This folder contains everything needed for distributed deployment of the Paper L
 |------|---------|
 | **README.md** | Comprehensive deployment guide with architecture diagrams, step-by-step instructions, and troubleshooting |
 | **CHECKLIST.md** | Pre-flight checklist for deployment verification |
+| **DATA-RESTORE.md** | How to download paper PDFs/HTMLs and the database from a GitHub Release |
 | **backend.env.example** | Environment configuration template for backend |
 | **nginx-frontend.conf** | Production nginx configuration for frontend |
 | **server.distributed.mjs** | Bun dev server variant for remote backend |

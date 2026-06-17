@@ -12,16 +12,20 @@ from pathlib import Path
 from typing import Optional
 
 import aiohttp
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 
 from db import get_db, init_db, row_to_dict
 
+load_dotenv()
+
 app = FastAPI()
+_allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[origin.strip() for origin in _allowed_origins],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -31,6 +35,30 @@ ROOT = Path(__file__).parent
 UPLOAD_DIR = ROOT / "archive" / "_unsorted" / "Library" / "01_curated" / "original"
 HTML_DIR = ROOT / "archive" / "_unsorted" / "Library" / "01_curated" / "html"
 DOCKER_IMAGE = "pdf2htmlex/pdf2htmlex:0.18.8.rc2-master-20200820-ubuntu-20.04-x86_64"
+
+_PDF2HTMLEX_FLAGS = [
+    "--embed-css", "1",
+    "--embed-font", "1",
+    "--embed-image", "1",
+    "--embed-javascript", "1",
+    "--embed-outline", "1",
+    "--zoom", "1.3",
+    "--fit-width", "1024",
+]
+
+
+def _build_pdf2htmlEX_cmd(pdf_path: Path) -> list[str]:
+    """Return a pdf2htmlEX command list. Prefer the native binary; fall back to Docker."""
+    if shutil.which("pdf2htmlEX"):
+        return ["pdf2htmlEX", *_PDF2HTMLEX_FLAGS, str(pdf_path)]
+    return [
+        "docker", "run", "--rm",
+        "-v", f"{pdf_path.parent}:/pdf",
+        "-w", "/pdf",
+        DOCKER_IMAGE,
+        *_PDF2HTMLEX_FLAGS,
+        pdf_path.name,
+    ]
 
 MIME_TYPES = {
     ".html": "text/html",
@@ -766,7 +794,7 @@ async def upload_and_crawl(file: UploadFile = File(...)):
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_bytes(file_data)
 
-    # --- Convert PDF → HTML via pdf2htmlEX Docker ---
+    # --- Convert PDF → HTML via pdf2htmlEX ---
     html_output = HTML_DIR / f"{paper_id}.html"
     html_output.parent.mkdir(parents=True, exist_ok=True)
     html_error = None
@@ -777,20 +805,7 @@ async def upload_and_crawl(file: UploadFile = File(...)):
             with tempfile.TemporaryDirectory() as tmpdir:
                 tmp_pdf = Path(tmpdir) / pdf_filename
                 shutil.copy2(dest, tmp_pdf)
-                cmd = [
-                    "docker", "run", "--rm",
-                    "-v", f"{tmpdir}:/pdf",
-                    "-w", "/pdf",
-                    DOCKER_IMAGE,
-                    "--embed-css", "1",
-                    "--embed-font", "1",
-                    "--embed-image", "1",
-                    "--embed-javascript", "1",
-                    "--embed-outline", "1",
-                    "--zoom", "1.3",
-                    "--fit-width", "1024",
-                    pdf_filename,
-                ]
+                cmd = _build_pdf2htmlEX_cmd(tmp_pdf)
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
                 if result.returncode != 0:
                     raise RuntimeError(f"pdf2htmlEX failed: {result.stderr[:500]}")
@@ -942,7 +957,7 @@ async def generate_html(request: Request):
     if file_size_mb > 100:
         raise HTTPException(status_code=413, detail=f"PDF too large for conversion: {file_size_mb:.0f}MB (max 100MB)")
 
-    # Run pdf2htmlEX in Docker (synchronous, runs in thread)
+    # Run pdf2htmlEX (synchronous, runs in thread)
     output_path = HTML_DIR / f"{paper_id}.html"
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -950,20 +965,7 @@ async def generate_html(request: Request):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_pdf = Path(tmpdir) / pdf_path.name
             shutil.copy2(pdf_path, tmp_pdf)
-            cmd = [
-                "docker", "run", "--rm",
-                "-v", f"{tmpdir}:/pdf",
-                "-w", "/pdf",
-                DOCKER_IMAGE,
-                "--embed-css", "1",
-                "--embed-font", "1",
-                "--embed-image", "1",
-                "--embed-javascript", "1",
-                "--embed-outline", "1",
-                "--zoom", "1.3",
-                "--fit-width", "1024",
-                pdf_path.name,
-            ]
+            cmd = _build_pdf2htmlEX_cmd(tmp_pdf)
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
             if result.returncode != 0:
                 raise RuntimeError(f"pdf2htmlEX failed: {result.stderr[:500]}")
