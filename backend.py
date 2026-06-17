@@ -23,6 +23,7 @@ from auth import (
     verify_password,
     create_access_token,
     get_current_user,
+    require_user,
     require_admin,
     ensure_default_admin,
 )
@@ -126,7 +127,7 @@ async def run_embed_new_paper(paper_id: str):
 # --- Public API Routes ---
 
 @app.post("/api/track-view")
-async def track_view(request: Request):
+async def track_view(request: Request, user: dict = Depends(require_user)):
     body = await request.json()
     paper_id = body.get("paper_id")
     if paper_id:
@@ -142,7 +143,7 @@ async def track_view(request: Request):
     return {"ok": True}
 
 @app.get("/api/rankings")
-async def rankings(window: str = "all"):
+async def rankings(window: str = "all", user: dict = Depends(require_user)):
     days = None
     if window == "7":
         days = 7
@@ -178,7 +179,7 @@ async def rankings(window: str = "all"):
     return ranked[:10]
 
 @app.get("/api/paper")
-async def get_paper(paper_id: Optional[str] = None):
+async def get_paper(paper_id: Optional[str] = None, user: dict = Depends(require_user)):
     if not paper_id:
         raise HTTPException(status_code=400, detail="paper_id parameter required")
     conn = get_db()
@@ -204,7 +205,7 @@ async def get_paper(paper_id: Optional[str] = None):
     }
 
 @app.get("/api/papers")
-async def list_papers():
+async def list_papers(user: dict = Depends(require_user)):
     """Return all papers as a JSON array. Excludes full_text for lightweight payload."""
     conn = get_db()
     try:
@@ -325,6 +326,7 @@ def _search_papers(papers: list, q: str) -> list:
 @app.get("/api/search")
 async def search_papers(
     q: str = Query(default="", description="Fuzzy search query (matches title, authors, venue, tags, DOI, abstract)"),
+    user: dict = Depends(require_user),
     year_from: int = Query(default=None, description="Minimum year filter"),
     year_to: int = Query(default=None, description="Maximum year filter"),
     source: str = Query(default=None, description="Filter by source collection"),
@@ -605,7 +607,7 @@ async def extract_pdf_metadata(request: Request, admin_user: dict = Depends(requ
             pass
 
 @app.post("/api/search-semantic")
-async def search_semantic(request: Request):
+async def search_semantic(request: Request, user: dict = Depends(require_user)):
     body = await request.json()
     query = body.get("query")
     if not query:

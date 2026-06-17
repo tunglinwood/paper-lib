@@ -254,7 +254,7 @@ function setupAuthUI() {
             await logout();
             updateUI();
         } else {
-            window.location.href = '/login.html';
+            window.location.href = '/login';
         }
     });
 

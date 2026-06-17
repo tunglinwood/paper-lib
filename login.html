@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Paper Library</title>
+
     <link rel="stylesheet" href="src/css/base.css">
     <link rel="stylesheet" href="src/css/layout.css">
     <link rel="stylesheet" href="src/css/header.css">
@@ -83,7 +84,7 @@
     </div>
 
     <div class="login-container">
-        <h1>Admin Login</h1>
+        <h1>Login</h1>
         <form id="loginForm">
             <div class="form-group">
                 <label for="username">Username</label>
@@ -109,7 +110,7 @@
         const errorMessage = document.getElementById('errorMessage');
         const submitBtn = document.getElementById('submitBtn');
         const urlParams = new URLSearchParams(window.location.search);
-        const next = urlParams.get('next') || '/admin';
+        const next = urlParams.get('next');
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -122,12 +123,18 @@
 
             try {
                 const data = await login(username, password);
-                if (data.user && data.user.is_admin) {
-                    window.location.href = next;
-                } else {
-                    errorMessage.textContent = 'Admin access required';
+                if (!data.user) {
+                    errorMessage.textContent = 'Login failed';
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Login';
+                    return;
+                }
+                if (next) {
+                    window.location.href = next;
+                } else if (data.user.is_admin) {
+                    window.location.href = '/admin';
+                } else {
+                    window.location.href = '/';
                 }
             } catch (err) {
                 errorMessage.textContent = err.message || 'Login failed';

@@ -99,8 +99,8 @@ export async function apiFetch(url, options = {}) {
 
     if (response.status === 401) {
         clearToken();
-        if (window.location.pathname !== '/login.html' && window.location.pathname !== '/login') {
-            window.location.href = '/login.html?next=' + encodeURIComponent(window.location.pathname + window.location.search);
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/login/') {
+            window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname + window.location.search);
         }
         throw new Error('Unauthorized');
     }
@@ -110,7 +110,7 @@ export async function apiFetch(url, options = {}) {
 
 export function requireAuth() {
     if (!isLoggedIn()) {
-        window.location.href = '/login.html?next=' + encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname + window.location.search);
         return false;
     }
     return true;
@@ -118,7 +118,7 @@ export function requireAuth() {
 
 export function requireAdmin() {
     if (!isLoggedIn() || !isAdmin()) {
-        window.location.href = '/login.html?next=' + encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname + window.location.search);
         return false;
     }
     return true;

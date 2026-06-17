@@ -9,13 +9,13 @@ export const API_BASE = '';
 export const PDF_BASE = '/archive/_unsorted/Library/';
 
 export async function fetchIndex() {
-    const response = await fetch(`${API_BASE}/api/papers?_t=${Date.now()}`);
+    const response = await apiFetch(`${API_BASE}/api/papers?_t=${Date.now()}`);
     return response.json();
 }
 
 export async function trackView(paperId, type = 'preview') {
     try {
-        await fetch(`${API_BASE}/api/track-view`, {
+        await apiFetch(`${API_BASE}/api/track-view`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paper_id: paperId, type }),
@@ -24,7 +24,7 @@ export async function trackView(paperId, type = 'preview') {
 }
 
 export async function fetchRankings(windowDays = '7') {
-    const resp = await fetch(`${API_BASE}/api/rankings?window=${windowDays}`);
+    const resp = await apiFetch(`${API_BASE}/api/rankings?window=${windowDays}`);
     return resp.json();
 }
 
@@ -78,7 +78,7 @@ export async function searchPapers(params = {}) {
     if (params.page_size) qs.set('page_size', params.page_size);
     if (params.include) qs.set('include', params.include);
 
-    const resp = await fetch(`${API_BASE}/api/search?${qs}`);
+    const resp = await apiFetch(`${API_BASE}/api/search?${qs}`);
     return resp.json();
 }
 
