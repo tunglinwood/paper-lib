@@ -70,6 +70,24 @@ def _build_pdf2htmlEX_cmd(pdf_path: Path) -> list[str]:
         pdf_path.name,
     ]
 
+
+_DOWNLOAD_BUTTON_SCRIPT = '<script type="module" src="/src/js/download-button.js"></script>'
+
+
+def _inject_download_button(html_path: Path) -> None:
+    """Inject the download-button module into a generated paper HTML file."""
+    text = html_path.read_text(encoding="utf-8")
+    if _DOWNLOAD_BUTTON_SCRIPT in text or "paper-download-btn" in text:
+        return
+    if "</body>" in text:
+        new_text = text.replace("</body>", f"{_DOWNLOAD_BUTTON_SCRIPT}\n</body>", 1)
+    elif "</html>" in text:
+        new_text = text.replace("</html>", f"{_DOWNLOAD_BUTTON_SCRIPT}\n</html>", 1)
+    else:
+        new_text = text + "\n" + _DOWNLOAD_BUTTON_SCRIPT + "\n"
+    html_path.write_text(new_text, encoding="utf-8")
+
+
 MIME_TYPES = {
     ".html": "text/html",
     ".css": "text/css",
@@ -923,6 +941,7 @@ async def upload_and_crawl(file: UploadFile = File(...), admin_user: dict = Depe
                 if generated.stat().st_size > 50 * 1024 * 1024:
                     raise RuntimeError(f"HTML output too large: {generated.stat().st_size / (1024*1024):.0f}MB")
                 shutil.move(str(generated), str(html_output))
+                _inject_download_button(html_output)
 
         try:
             await asyncio.to_thread(_run_conversion)
@@ -1080,6 +1099,7 @@ async def generate_html(request: Request, admin_user: dict = Depends(require_adm
             if not generated.exists():
                 raise RuntimeError("pdf2htmlEX produced no output file")
             shutil.move(str(generated), str(output_path))
+            _inject_download_button(output_path)
 
     try:
         await asyncio.to_thread(_run_conversion)
