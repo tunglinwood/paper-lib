@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Paper Library</title>
+    <title>登录 - 论文库</title>
 
     <link rel="stylesheet" href="src/css/base.css">
     <link rel="stylesheet" href="src/css/layout.css">
@@ -78,28 +78,28 @@
 <body>
     <div class="header">
         <div class="header-text">
-            <h1>Paper Library</h1>
-            <p>Research Archive - Search, Browse &amp; Export</p>
+            <h1>论文库</h1>
+            <p>研究文献档案 — 搜索、浏览与导出</p>
         </div>
     </div>
 
     <div class="login-container">
-        <h1>Login</h1>
+        <h1>登录</h1>
         <form id="loginForm">
             <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required autofocus autocomplete="username">
+                <label for="username">用户名</label>
+                <input type="text" id="username" name="username" required autofocus autocomplete="username" placeholder="请输入用户名">
             </div>
             <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required autocomplete="current-password">
+                <label for="password">密码</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="请输入密码">
             </div>
-            <button type="submit" class="login-btn" id="submitBtn">Login</button>
+            <button type="submit" class="login-btn" id="submitBtn">登录</button>
             <div class="error-message" id="errorMessage"></div>
         </form>
         <div class="login-hint">
-            Default admin: <code>admin / admin</code><br>
-            Change via <code>ADMIN_USERNAME</code> and <code>ADMIN_PASSWORD</code> env vars.
+            默认管理员：<code>admin / admin</code><br>
+            可通过环境变量 <code>ADMIN_USERNAME</code> 和 <code>ADMIN_PASSWORD</code> 修改。
         </div>
     </div>
 
@@ -116,7 +116,7 @@
             e.preventDefault();
             errorMessage.textContent = '';
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Logging in...';
+            submitBtn.textContent = '登录中...';
 
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
@@ -124,9 +124,9 @@
             try {
                 const data = await login(username, password);
                 if (!data.user) {
-                    errorMessage.textContent = 'Login failed';
+                    errorMessage.textContent = '登录失败';
                     submitBtn.disabled = false;
-                    submitBtn.textContent = 'Login';
+                    submitBtn.textContent = '登录';
                     return;
                 }
                 if (next) {
@@ -137,9 +137,9 @@
                     window.location.href = '/';
                 }
             } catch (err) {
-                errorMessage.textContent = err.message || 'Login failed';
+                errorMessage.textContent = err.message || '登录失败';
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Login';
+                submitBtn.textContent = '登录';
             }
         });
     </script>
