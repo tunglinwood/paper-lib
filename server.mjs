@@ -60,6 +60,22 @@ const server = Bun.serve({
       });
     }
 
+    // Serve login app at /login or /login/
+    if (url.pathname === "/login" || url.pathname === "/login/") {
+      const loginFile = Bun.file("./login.html");
+      if (await loginFile.exists()) {
+        return new Response(loginFile, { headers: { "Content-Type": "text/html" } });
+      }
+    }
+
+    // Redirect old /login.html bookmark to /login
+    if (url.pathname === "/login.html") {
+      return new Response(null, {
+        status: 301,
+        headers: { Location: "/login" },
+      });
+    }
+
     // Serve static files from project root
     const filePath = "." + url.pathname;
     const file = Bun.file(filePath);
