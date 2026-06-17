@@ -55,6 +55,23 @@ export async function login(username, password) {
     return data;
 }
 
+export async function register(username, password, email = '') {
+    const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, email }),
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+        throw new Error(data.detail || data.error || '注册失败');
+    }
+
+    setToken(data.token);
+    setUser(data.user);
+    return data;
+}
+
 export async function logout() {
     try {
         await fetch('/api/auth/logout', { method: 'POST' });

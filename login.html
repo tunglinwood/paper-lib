@@ -67,11 +67,19 @@
             text-align: center;
             min-height: 1.25rem;
         }
-        .login-hint {
-            margin-top: 1.5rem;
+        .form-toggle {
+            margin-top: 1.25rem;
             text-align: center;
             color: #666;
             font-size: 0.9rem;
+        }
+        .form-toggle a {
+            color: var(--primary-color, #2563eb);
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .hidden {
+            display: none;
         }
     </style>
 </head>
@@ -84,50 +92,94 @@
     </div>
 
     <div class="login-container">
-        <h1>登录</h1>
-        <form id="loginForm">
-            <div class="form-group">
-                <label for="username">用户名</label>
-                <input type="text" id="username" name="username" required autofocus autocomplete="username" placeholder="请输入用户名">
+        <!-- Login Form -->
+        <div id="loginSection">
+            <h1>登录</h1>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginUsername">用户名</label>
+                    <input type="text" id="loginUsername" name="username" required autofocus autocomplete="username" placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">密码</label>
+                    <input type="password" id="loginPassword" name="password" required autocomplete="current-password" placeholder="请输入密码">
+                </div>
+                <button type="submit" class="login-btn" id="loginSubmitBtn">登录</button>
+                <div class="error-message" id="loginErrorMessage"></div>
+            </form>
+            <div class="form-toggle">
+                还没有账号？<a id="showRegister">立即注册</a>
             </div>
-            <div class="form-group">
-                <label for="password">密码</label>
-                <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="请输入密码">
+        </div>
+
+        <!-- Register Form -->
+        <div id="registerSection" class="hidden">
+            <h1>注册</h1>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="registerUsername">用户名</label>
+                    <input type="text" id="registerUsername" name="username" required autocomplete="username" placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">邮箱（可选）</label>
+                    <input type="email" id="registerEmail" name="email" autocomplete="email" placeholder="请输入邮箱">
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">密码</label>
+                    <input type="password" id="registerPassword" name="password" required autocomplete="new-password" placeholder="至少 6 位密码">
+                </div>
+                <div class="form-group">
+                    <label for="registerPasswordConfirm">确认密码</label>
+                    <input type="password" id="registerPasswordConfirm" name="passwordConfirm" required autocomplete="new-password" placeholder="请再次输入密码">
+                </div>
+                <button type="submit" class="login-btn" id="registerSubmitBtn">注册</button>
+                <div class="error-message" id="registerErrorMessage"></div>
+            </form>
+            <div class="form-toggle">
+                已有账号？<a id="showLogin">立即登录</a>
             </div>
-            <button type="submit" class="login-btn" id="submitBtn">登录</button>
-            <div class="error-message" id="errorMessage"></div>
-        </form>
-        <div class="login-hint">
-            默认管理员：<code>admin / admin</code><br>
-            可通过环境变量 <code>ADMIN_USERNAME</code> 和 <code>ADMIN_PASSWORD</code> 修改。
         </div>
     </div>
 
     <script type="module">
-        import { login } from './src/js/auth.js';
+        import { login, register } from './src/js/auth.js';
 
-        const form = document.getElementById('loginForm');
-        const errorMessage = document.getElementById('errorMessage');
-        const submitBtn = document.getElementById('submitBtn');
+        const loginSection = document.getElementById('loginSection');
+        const registerSection = document.getElementById('registerSection');
+        const showRegister = document.getElementById('showRegister');
+        const showLogin = document.getElementById('showLogin');
+
+        showRegister.addEventListener('click', () => {
+            loginSection.classList.add('hidden');
+            registerSection.classList.remove('hidden');
+        });
+
+        showLogin.addEventListener('click', () => {
+            registerSection.classList.add('hidden');
+            loginSection.classList.remove('hidden');
+        });
+
         const urlParams = new URLSearchParams(window.location.search);
         const next = urlParams.get('next');
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            errorMessage.textContent = '';
-            submitBtn.disabled = true;
-            submitBtn.textContent = '登录中...';
+        // Login handler
+        const loginForm = document.getElementById('loginForm');
+        const loginError = document.getElementById('loginErrorMessage');
+        const loginBtn = document.getElementById('loginSubmitBtn');
 
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            loginError.textContent = '';
+            loginBtn.disabled = true;
+            loginBtn.textContent = '登录中...';
+
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
 
             try {
                 const data = await login(username, password);
                 if (!data.user) {
-                    errorMessage.textContent = '登录失败';
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = '登录';
-                    return;
+                    throw new Error('登录失败');
                 }
                 if (next) {
                     window.location.href = next;
@@ -137,9 +189,52 @@
                     window.location.href = '/';
                 }
             } catch (err) {
-                errorMessage.textContent = err.message || '登录失败';
-                submitBtn.disabled = false;
-                submitBtn.textContent = '登录';
+                loginError.textContent = err.message || '登录失败';
+                loginBtn.disabled = false;
+                loginBtn.textContent = '登录';
+            }
+        });
+
+        // Register handler
+        const registerForm = document.getElementById('registerForm');
+        const registerError = document.getElementById('registerErrorMessage');
+        const registerBtn = document.getElementById('registerSubmitBtn');
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            registerError.textContent = '';
+
+            const username = document.getElementById('registerUsername').value.trim();
+            const email = document.getElementById('registerEmail').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
+
+            if (password !== passwordConfirm) {
+                registerError.textContent = '两次输入的密码不一致';
+                return;
+            }
+            if (password.length < 6) {
+                registerError.textContent = '密码长度至少为 6 位';
+                return;
+            }
+
+            registerBtn.disabled = true;
+            registerBtn.textContent = '注册中...';
+
+            try {
+                const data = await register(username, password, email);
+                if (!data.user) {
+                    throw new Error('注册失败');
+                }
+                if (next) {
+                    window.location.href = next;
+                } else {
+                    window.location.href = '/';
+                }
+            } catch (err) {
+                registerError.textContent = err.message || '注册失败';
+                registerBtn.disabled = false;
+                registerBtn.textContent = '注册';
             }
         });
     </script>
