@@ -4,6 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent
 DB_PATH = ROOT / "papers.db"
+AUTH_DB_PATH = ROOT / "users.db"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS papers (
@@ -68,6 +69,14 @@ def get_db():
     conn = sqlite3.connect(str(DB_PATH))
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def get_auth_db():
+    """Get a connection to the separate authentication database (users.db)."""
+    conn = sqlite3.connect(str(AUTH_DB_PATH))
+    conn.execute("PRAGMA journal_mode=WAL")
     conn.row_factory = sqlite3.Row
     return conn
 

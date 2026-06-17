@@ -16,7 +16,7 @@ import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from db import get_db
+from db import get_auth_db
 
 # --- Config ---
 JWT_SECRET = os.getenv("JWT_SECRET", "change-me-in-production")
@@ -56,7 +56,7 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 # --- User DB helpers ---
 def get_user_by_username(username: str):
-    conn = get_db()
+    conn = get_auth_db()
     try:
         row = conn.execute(
             "SELECT id, username, password_hash, email, is_admin FROM users WHERE username = ?",
@@ -68,7 +68,7 @@ def get_user_by_username(username: str):
 
 
 def get_user_by_id(user_id: int):
-    conn = get_db()
+    conn = get_auth_db()
     try:
         row = conn.execute(
             "SELECT id, username, password_hash, email, is_admin FROM users WHERE id = ?",
@@ -80,7 +80,7 @@ def get_user_by_id(user_id: int):
 
 
 def create_user(username: str, password: str, email: Optional[str] = None, is_admin: bool = False):
-    conn = get_db()
+    conn = get_auth_db()
     try:
         existing = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
         if existing:
@@ -98,7 +98,7 @@ def create_user(username: str, password: str, email: Optional[str] = None, is_ad
 
 
 def update_last_login(user_id: int):
-    conn = get_db()
+    conn = get_auth_db()
     try:
         conn.execute(
             "UPDATE users SET last_login = datetime('now') WHERE id = ?",
@@ -200,7 +200,7 @@ async def require_admin(user: Optional[dict] = Depends(get_current_user)) -> dic
 # --- Default admin seed ---
 def ensure_default_admin():
     """Create a default admin user if no users exist."""
-    conn = get_db()
+    conn = get_auth_db()
     try:
         count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
         if count == 0 and DEFAULT_ADMIN_USERNAME and DEFAULT_ADMIN_PASSWORD:
