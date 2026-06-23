@@ -1,9 +1,10 @@
 /**
  * Download-button module for pdf2htmlEX-generated paper HTML pages.
  *
- * Adds a fixed "Download PDF" button in the top-right corner. The button
- * derives the paper ID from the current page URL (`/papers/<paper_id>.html`)
- * and links to the matching PDF file.
+ * Adds a fixed "Download PDF" button in the top-right corner. When clicked,
+ * it fetches the matching PDF as a blob and triggers a browser download so
+ * the file is saved with the correct name, even if the browser would otherwise
+ * just display it inline.
  */
 (function () {
   if (document.getElementById('paper-download-btn')) return;
@@ -16,11 +17,11 @@
   if (!paperId || !paperId.startsWith('sha256_')) return;
 
   const pdfUrl = `/archive/_unsorted/Library/01_curated/original/${paperId}.pdf`;
+  const pdfFilename = `${paperId}.pdf`;
 
-  const btn = document.createElement('a');
+  const btn = document.createElement('button');
   btn.id = 'paper-download-btn';
-  btn.href = pdfUrl;
-  btn.download = `${paperId}.pdf`;
+  btn.type = 'button';
   btn.textContent = 'Download PDF';
   btn.title = 'Download original PDF';
 
@@ -42,6 +43,7 @@
     cursor: 'pointer',
     border: 'none',
     outline: 'none',
+    pointerEvents: 'auto',
   });
 
   btn.addEventListener('mouseenter', () => {
@@ -51,7 +53,31 @@
     btn.style.backgroundColor = '#2563eb';
   });
 
-  // Some browsers ignore the download attribute for non-same-origin URLs.
-  // The PDFs are served from the same origin, so this works as expected.
+  btn.addEventListener('click', async () => {
+    btn.textContent = 'Downloading…';
+    btn.style.opacity = '0.7';
+    try {
+      const response = await fetch(pdfUrl, { credentials: 'same-origin' });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = pdfFilename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (err) {
+      console.error('[download-button]', err);
+      window.open(pdfUrl, '_blank');
+    } finally {
+      btn.textContent = 'Download PDF';
+      btn.style.opacity = '1';
+    }
+  });
+
   document.body.appendChild(btn);
 })();

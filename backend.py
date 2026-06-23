@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import os
+import secrets
 import shutil
 import subprocess
 import tempfile
@@ -28,6 +29,7 @@ from auth import (
     require_admin,
     ensure_default_admin,
 )
+import ldap_auth
 
 load_dotenv()
 
@@ -238,7 +240,11 @@ async def list_papers(user: dict = Depends(require_user)):
 
 @app.post("/api/auth/login")
 async def api_login(request: Request):
-    """Authenticate a user and return a JWT access token."""
+    """Authenticate a user and return a JWT access token.
+
+    First tries local credentials; if that fails, falls back to LDAP/AD.
+    LDAP users are auto-provisioned as regular local users on first success.
+    """
     body = await request.json()
     username = body.get("username", "").strip()
     password = body.get("password", "")
@@ -247,7 +253,24 @@ async def api_login(request: Request):
         raise HTTPException(status_code=400, detail="Username and password are required")
 
     user = get_user_by_username(username)
-    if not user or not verify_password(password, user["password_hash"]):
+
+    # 1. Try local authentication first
+    if user and verify_password(password, user["password_hash"]):
+        pass
+    # 2. Fall back to LDAP/AD authentication
+    elif ldap_auth.check_username_and_password(username, password):
+        if not user:
+            # Auto-provision a regular local account for the LDAP user.
+            create_user(
+                username,
+                secrets.token_urlsafe(32),
+                email=ldap_auth.ldap_user_email(username),
+                is_admin=False,
+            )
+            user = get_user_by_username(username)
+        if not user:
+            raise HTTPException(status_code=500, detail="Failed to provision LDAP user")
+    else:
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
     from auth import update_last_login
