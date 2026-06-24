@@ -254,11 +254,11 @@ async def api_login(request: Request):
 
     user = get_user_by_username(username)
 
-    # 1. Try local authentication first
-    if user and verify_password(password, user["password_hash"]):
-        pass
-    # 2. Fall back to LDAP/AD authentication
-    elif ldap_auth.check_username_and_password(username, password):
+    # 1. Try LDAP/AD authentication first so domain users are wired to LDAP.
+    # If the local account has an email, use it as the LDAP userPrincipalName.
+    ldap_enabled = os.getenv("LDAP_ENABLED", "true").lower() in ("true", "1", "yes")
+    ldap_upn = user.get("email") if user and user.get("email") else None
+    if ldap_enabled and ldap_auth.check_username_and_password(username, password, upn=ldap_upn):
         if not user:
             # Auto-provision a regular local account for the LDAP user.
             create_user(
@@ -270,6 +270,9 @@ async def api_login(request: Request):
             user = get_user_by_username(username)
         if not user:
             raise HTTPException(status_code=500, detail="Failed to provision LDAP user")
+    # 2. Fall back to local authentication for users without LDAP accounts
+    elif user and verify_password(password, user["password_hash"]):
+        pass
     else:
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
