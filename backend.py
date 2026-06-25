@@ -1194,15 +1194,22 @@ async def serve_login_html():
 # --- HTML Paper Serving ---
 HTML_PAPER_DIR = ROOT / "archive" / "_unsorted" / "Library" / "01_curated" / "html"
 
+async def _require_user_for_archive(full_path: str, user: Optional[dict] = Depends(get_current_user)) -> Optional[dict]:
+    """Protect paper files under /archive/ while keeping other static files public."""
+    if full_path.startswith("archive/") and not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user
+
+
 @app.get("/papers/{paper_id}.html")
-async def serve_paper_html(paper_id: str):
+async def serve_paper_html(paper_id: str, user: dict = Depends(require_user)):
     file_path = HTML_PAPER_DIR / f"{paper_id}.html"
     if file_path.is_file():
         return FileResponse(str(file_path), media_type="text/html")
     raise HTTPException(status_code=404, detail="HTML version not found")
 
 @app.get("/{full_path:path}")
-async def serve_static(full_path: str):
+async def serve_static(full_path: str, user: Optional[dict] = Depends(_require_user_for_archive)):
     file_path = ROOT / full_path
     if file_path.is_file():
         ext = file_path.suffix
