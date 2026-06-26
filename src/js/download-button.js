@@ -55,8 +55,16 @@ import { apiFetch } from './auth.js';
     // Remove characters that are illegal in Windows / macOS / Linux filenames
     let safe = name.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').trim();
     if (!safe) return paperId;
-    // Limit length so the filename is manageable
-    if (safe.length > 120) safe = safe.slice(0, 120) + '…';
+
+    // Most filesystems limit filenames to 255 bytes. Truncate to ~240 bytes
+    // of UTF-8 without adding an ellipsis so the full usable title is kept.
+    const encoder = new TextEncoder();
+    let encoded = encoder.encode(safe);
+    if (encoded.length > 240) {
+      encoded = encoded.slice(0, 240);
+      // Decode back, replacing any partial multi-byte character at the end.
+      safe = new TextDecoder('utf-8', { fatal: false }).decode(encoded).trim();
+    }
     return `${safe}.pdf`;
   }
 
