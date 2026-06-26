@@ -2,10 +2,11 @@
  * Download-button module for pdf2htmlEX-generated paper HTML pages.
  *
  * Adds a fixed "Download PDF" button in the top-right corner. When clicked,
- * it fetches the matching PDF as a blob and triggers a browser download so
- * the file is saved with the correct name, even if the browser would otherwise
- * just display it inline.
+ * it fetches the paper metadata to determine the real PDF path (original vs
+ * working), then downloads the matching PDF as a blob.
  */
+import { apiFetch } from './auth.js';
+
 (function () {
   if (document.getElementById('paper-download-btn')) return;
 
@@ -15,9 +16,6 @@
     .replace(/\.html$/i, '');
 
   if (!paperId || !paperId.startsWith('sha256_')) return;
-
-  const pdfUrl = `/archive/_unsorted/Library/01_curated/original/${paperId}.pdf`;
-  const pdfFilename = `${paperId}.pdf`;
 
   const btn = document.createElement('button');
   btn.id = 'paper-download-btn';
@@ -53,26 +51,43 @@
     btn.style.backgroundColor = '#2563eb';
   });
 
+  async function resolvePdfUrl() {
+    const response = await apiFetch(`/api/paper?paper_id=${encodeURIComponent(paperId)}&_t=${Date.now()}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch paper metadata: ${response.status}`);
+    }
+    const paper = await response.json();
+    if (!paper || !paper.file_path) {
+      throw new Error('Paper metadata does not contain a file_path');
+    }
+    return `/archive/_unsorted/Library/${paper.file_path}`;
+  }
+
+  async function downloadPdf(pdfUrl) {
+    const response = await fetch(pdfUrl, { credentials: 'same-origin' });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
+    }
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objectUrl;
+    a.download = `${paperId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  }
+
   btn.addEventListener('click', async () => {
     btn.textContent = 'Downloading…';
     btn.style.opacity = '0.7';
     try {
-      const response = await fetch(pdfUrl, { credentials: 'same-origin' });
-      if (!response.ok) {
-        throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
-      }
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = objectUrl;
-      a.download = pdfFilename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      const pdfUrl = await resolvePdfUrl();
+      await downloadPdf(pdfUrl);
     } catch (err) {
       console.error('[download-button]', err);
-      window.open(pdfUrl, '_blank');
+      alert('Could not download PDF: ' + err.message);
     } finally {
       btn.textContent = 'Download PDF';
       btn.style.opacity = '1';

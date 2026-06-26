@@ -1159,12 +1159,23 @@ async def generate_html(request: Request, admin_user: dict = Depends(require_adm
     }
 
 
+_NO_CACHE_HEADERS = {
+    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    "Pragma": "no-cache",
+}
+
+
+def _file_response(file_path: Path, media_type: str) -> FileResponse:
+    """Return a FileResponse that instructs browsers not to cache the file."""
+    return FileResponse(str(file_path), media_type=media_type, headers=_NO_CACHE_HEADERS)
+
+
 # --- Static File Serving ---
 @app.get("/")
 async def serve_index():
     file_path = ROOT / "index.html"
     if file_path.is_file():
-        return FileResponse(str(file_path), media_type="text/html")
+        return _file_response(file_path, "text/html")
     raise HTTPException(status_code=404, detail="Not Found")
 
 @app.get("/admin")
@@ -1172,24 +1183,24 @@ async def serve_index():
 async def serve_admin():
     file_path = ROOT / "admin.html"
     if file_path.is_file():
-        return FileResponse(str(file_path), media_type="text/html")
+        return _file_response(file_path, "text/html")
     raise HTTPException(status_code=404, detail="Not Found")
 
 @app.get("/admin.html")
 async def serve_admin_html():
-    return RedirectResponse(url="/admin", status_code=301)
+    return RedirectResponse(url="/admin", status_code=302, headers=_NO_CACHE_HEADERS)
 
 @app.get("/login")
 @app.get("/login/")
 async def serve_login():
     file_path = ROOT / "login.html"
     if file_path.is_file():
-        return FileResponse(str(file_path), media_type="text/html")
+        return _file_response(file_path, "text/html")
     raise HTTPException(status_code=404, detail="Not Found")
 
 @app.get("/login.html")
 async def serve_login_html():
-    return RedirectResponse(url="/login", status_code=301)
+    return RedirectResponse(url="/login", status_code=302, headers=_NO_CACHE_HEADERS)
 
 # --- HTML Paper Serving ---
 HTML_PAPER_DIR = ROOT / "archive" / "_unsorted" / "Library" / "01_curated" / "html"
@@ -1205,7 +1216,7 @@ async def _require_user_for_archive(full_path: str, user: Optional[dict] = Depen
 async def serve_paper_html(paper_id: str, user: dict = Depends(require_user)):
     file_path = HTML_PAPER_DIR / f"{paper_id}.html"
     if file_path.is_file():
-        return FileResponse(str(file_path), media_type="text/html")
+        return _file_response(file_path, "text/html")
     raise HTTPException(status_code=404, detail="HTML version not found")
 
 @app.get("/{full_path:path}")
@@ -1214,5 +1225,5 @@ async def serve_static(full_path: str, user: Optional[dict] = Depends(_require_u
     if file_path.is_file():
         ext = file_path.suffix
         content_type = MIME_TYPES.get(ext, "application/octet-stream")
-        return FileResponse(str(file_path), media_type=content_type)
+        return _file_response(file_path, content_type)
     raise HTTPException(status_code=404, detail="Not Found")
