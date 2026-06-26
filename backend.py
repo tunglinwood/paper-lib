@@ -73,7 +73,7 @@ def _build_pdf2htmlEX_cmd(pdf_path: Path) -> list[str]:
     ]
 
 
-_DOWNLOAD_BUTTON_SCRIPT = '<script type="module" src="/src/js/download-button.js?v=2"></script>'
+_DOWNLOAD_BUTTON_SCRIPT = '<script type="module" src="/src/js/download-button.js?v=3"></script>'
 
 
 def _inject_download_button(html_path: Path) -> None:

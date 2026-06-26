@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 HTML_DIR = ROOT / "archive" / "_unsorted" / "Library" / "01_curated" / "html"
-SCRIPT_TAG = '<script type="module" src="/src/js/download-button.js?v=2"></script>'
+SCRIPT_TAG = '<script type="module" src="/src/js/download-button.js?v=3"></script>'
 
 
 def inject(html_path: Path) -> bool:
