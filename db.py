@@ -63,6 +63,20 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 """
 
+AUTH_SCHEMA = """
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    email TEXT,
+    is_admin INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+"""
+
 
 def get_db():
     """Get a new database connection with WAL mode and Row factory."""
@@ -77,6 +91,7 @@ def get_auth_db():
     """Get a connection to the separate authentication database (users.db)."""
     conn = sqlite3.connect(str(AUTH_DB_PATH))
     conn.execute("PRAGMA journal_mode=WAL")
+    conn.executescript(AUTH_SCHEMA)
     conn.row_factory = sqlite3.Row
     return conn
 
