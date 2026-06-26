@@ -73,7 +73,7 @@ def _build_pdf2htmlEX_cmd(pdf_path: Path) -> list[str]:
     ]
 
 
-_DOWNLOAD_BUTTON_SCRIPT = '<script type="module" src="/src/js/download-button.js"></script>'
+_DOWNLOAD_BUTTON_SCRIPT = '<script type="module" src="/src/js/download-button.js?v=2"></script>'
 
 
 def _inject_download_button(html_path: Path) -> None:
@@ -254,11 +254,11 @@ async def api_login(request: Request):
 
     user = get_user_by_username(username)
 
-    # 1. Try local authentication first
-    if user and verify_password(password, user["password_hash"]):
-        pass
-    # 2. Fall back to LDAP/AD authentication
-    elif ldap_auth.check_username_and_password(username, password):
+    # 1. Try LDAP/AD authentication first so domain users are wired to LDAP.
+    # If the local account has an email, use it as the LDAP userPrincipalName.
+    ldap_enabled = os.getenv("LDAP_ENABLED", "true").lower() in ("true", "1", "yes")
+    ldap_upn = user.get("email") if user and user.get("email") else None
+    if ldap_enabled and ldap_auth.check_username_and_password(username, password, upn=ldap_upn):
         if not user:
             # Auto-provision a regular local account for the LDAP user.
             create_user(
@@ -270,6 +270,9 @@ async def api_login(request: Request):
             user = get_user_by_username(username)
         if not user:
             raise HTTPException(status_code=500, detail="Failed to provision LDAP user")
+    # 2. Fall back to local authentication for users without LDAP accounts
+    elif user and verify_password(password, user["password_hash"]):
+        pass
     else:
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
@@ -1156,12 +1159,23 @@ async def generate_html(request: Request, admin_user: dict = Depends(require_adm
     }
 
 
+_NO_CACHE_HEADERS = {
+    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    "Pragma": "no-cache",
+}
+
+
+def _file_response(file_path: Path, media_type: str) -> FileResponse:
+    """Return a FileResponse that instructs browsers not to cache the file."""
+    return FileResponse(str(file_path), media_type=media_type, headers=_NO_CACHE_HEADERS)
+
+
 # --- Static File Serving ---
 @app.get("/")
 async def serve_index():
     file_path = ROOT / "index.html"
     if file_path.is_file():
-        return FileResponse(str(file_path), media_type="text/html")
+        return _file_response(file_path, "text/html")
     raise HTTPException(status_code=404, detail="Not Found")
 
 @app.get("/admin")
@@ -1169,40 +1183,47 @@ async def serve_index():
 async def serve_admin():
     file_path = ROOT / "admin.html"
     if file_path.is_file():
-        return FileResponse(str(file_path), media_type="text/html")
+        return _file_response(file_path, "text/html")
     raise HTTPException(status_code=404, detail="Not Found")
 
 @app.get("/admin.html")
 async def serve_admin_html():
-    return RedirectResponse(url="/admin", status_code=301)
+    return RedirectResponse(url="/admin", status_code=302, headers=_NO_CACHE_HEADERS)
 
 @app.get("/login")
 @app.get("/login/")
 async def serve_login():
     file_path = ROOT / "login.html"
     if file_path.is_file():
-        return FileResponse(str(file_path), media_type="text/html")
+        return _file_response(file_path, "text/html")
     raise HTTPException(status_code=404, detail="Not Found")
 
 @app.get("/login.html")
 async def serve_login_html():
-    return RedirectResponse(url="/login", status_code=301)
+    return RedirectResponse(url="/login", status_code=302, headers=_NO_CACHE_HEADERS)
 
 # --- HTML Paper Serving ---
 HTML_PAPER_DIR = ROOT / "archive" / "_unsorted" / "Library" / "01_curated" / "html"
 
+async def _require_user_for_archive(full_path: str, user: Optional[dict] = Depends(get_current_user)) -> Optional[dict]:
+    """Protect paper files under /archive/ while keeping other static files public."""
+    if full_path.startswith("archive/") and not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user
+
+
 @app.get("/papers/{paper_id}.html")
-async def serve_paper_html(paper_id: str):
+async def serve_paper_html(paper_id: str, user: dict = Depends(require_user)):
     file_path = HTML_PAPER_DIR / f"{paper_id}.html"
     if file_path.is_file():
-        return FileResponse(str(file_path), media_type="text/html")
+        return _file_response(file_path, "text/html")
     raise HTTPException(status_code=404, detail="HTML version not found")
 
 @app.get("/{full_path:path}")
-async def serve_static(full_path: str):
+async def serve_static(full_path: str, user: Optional[dict] = Depends(_require_user_for_archive)):
     file_path = ROOT / full_path
     if file_path.is_file():
         ext = file_path.suffix
         content_type = MIME_TYPES.get(ext, "application/octet-stream")
-        return FileResponse(str(file_path), media_type=content_type)
+        return _file_response(file_path, content_type)
     raise HTTPException(status_code=404, detail="Not Found")
