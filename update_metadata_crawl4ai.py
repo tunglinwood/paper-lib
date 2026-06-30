@@ -8,12 +8,14 @@ import json
 import re
 import sqlite3
 from pathlib import Path
+from bs4 import BeautifulSoup
 from crawl4ai.processors.pdf.processor import NaivePDFProcessorStrategy
 
 # Resolve paths relative to project root
 ROOT = Path(__file__).parent
 DB_PATH = ROOT / "papers.db"
 PDF_BASE = ROOT / "archive" / "_unsorted" / "Library"
+HTML_DIR = ROOT / "archive" / "_unsorted" / "Library" / "01_curated" / "html"
 
 
 def get_db():
@@ -30,6 +32,24 @@ def extract_first_page_pymupdf(pdf_path):
     text = doc[0].get_text()
     doc.close()
     return text
+
+
+def extract_first_text_from_html(html_path):
+    """Extract text from the first part of a pdf2htmlEX HTML file."""
+    html = html_path.read_text(encoding="utf-8", errors="ignore")
+    soup = BeautifulSoup(html, "html.parser")
+    for tag in soup(["script", "style", "noscript"]):
+        tag.decompose()
+    text = soup.get_text(separator="\n")
+    lines = []
+    for line in text.splitlines():
+        line = line.strip()
+        if line:
+            line = re.sub(r"\s+", " ", line)
+            lines.append(line)
+    full = "\n".join(lines)
+    full = "".join(c for c in full if not (0xD800 <= ord(c) <= 0xDFFF))
+    return full.replace("\x00", "")
 
 
 def extract_metadata(text):
@@ -137,27 +157,36 @@ def process_papers():
         if has_venue and has_authors:
             continue
 
+        paper_id = paper.get('paper_id', '')
         file_path = paper.get('file_path', '')
-        if not file_path:
+
+        html_path = HTML_DIR / f"{paper_id}.html" if paper_id else None
+        pdf_path = PDF_BASE / file_path if file_path else None
+
+        if html_path and html_path.exists():
+            source_path = html_path
+            source_type = "html"
+        elif pdf_path and pdf_path.exists():
+            source_path = pdf_path
+            source_type = "pdf"
+        else:
             skipped_count += 1
             continue
 
-        full_path = PDF_BASE / file_path
-        if not full_path.exists():
-            skipped_count += 1
-            continue
-
-        print(f"[{idx}] {full_path.name}")
+        print(f"[{idx}] {source_path.name}")
         print(f"  Current: venue='{paper.get('venue','')}', authors={len(paper.get('authors',[]))}")
 
         try:
             first_text = ''
-            try:
-                result = strategy.process_batch(Path(full_path))
-                first_text = result.pages[0].raw_text if result.pages else ''
-            except Exception:
-                print(f"  crawl4ai failed, falling back to PyMuPDF")
-                first_text = extract_first_page_pymupdf(full_path)
+            if source_type == "html":
+                first_text = extract_first_text_from_html(source_path)[:2000]
+            else:
+                try:
+                    result = strategy.process_batch(Path(source_path))
+                    first_text = result.pages[0].raw_text if result.pages else ''
+                except Exception:
+                    print(f"  crawl4ai failed, falling back to PyMuPDF")
+                    first_text = extract_first_page_pymupdf(source_path)
             if not first_text:
                 print(f"  SKIP: no text")
                 continue
