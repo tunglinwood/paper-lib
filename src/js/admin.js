@@ -299,8 +299,8 @@ function triggerFileSelect() {
     document.getElementById('uploadFile').click();
 }
 
-function handleFileSelect(e) {
-    const files = Array.from(e.target.files);
+function handleFileSelect(input) {
+    const files = Array.from(input?.target?.files || input || []);
     if (files.length === 0) {
         selectedFiles = [];
         document.getElementById('uploadFileList').style.display = 'none';
@@ -312,6 +312,39 @@ function handleFileSelect(e) {
     document.getElementById('uploadFileList').style.display = '';
     document.getElementById('uploadStartBtn').disabled = false;
     renderFileList();
+}
+
+function setupUploadDropZone() {
+    const dropZone = document.getElementById('uploadDropZone');
+    if (!dropZone) return;
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.add('drag-over');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.remove('drag-over');
+        }, false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        const files = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+        if (files.length === 0) {
+            alert('Please drop PDF files only.');
+            return;
+        }
+        handleFileSelect(files);
+    }, false);
 }
 
 function renderFileList() {
@@ -804,6 +837,7 @@ function setupEvents() {
         btn.addEventListener('click', closeUploadModal);
     });
     document.getElementById('uploadFile')?.addEventListener('change', handleFileSelect);
+    setupUploadDropZone();
     document.querySelectorAll('[data-action="trigger-file-select"]').forEach(btn => {
         btn.addEventListener('click', triggerFileSelect);
     });
