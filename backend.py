@@ -42,6 +42,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Return JSON for any unhandled exception instead of an HTML traceback."""
+    import traceback
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={"ok": False, "error": "Internal server error", "detail": str(exc)},
+    )
+
+
 # --- Config ---
 ROOT = Path(__file__).parent
 UPLOAD_DIR = ROOT / "archive" / "_unsorted" / "Library" / "01_curated" / "original"
@@ -867,16 +879,22 @@ async def upload(request: Request, file: Optional[UploadFile] = File(None), admi
         file_data = await file.read()
         if not file_data:
             raise HTTPException(status_code=400, detail="No file data")
-        form = await request.form()
-        fields = dict(form)
-        paper = build_paper_record(file_data, file.filename or "upload.pdf", fields)
-        insert_papers([paper])
-        asyncio.create_task(run_embed_new_paper(paper["paper_id"]))
-        return {
-            "ok": True,
-            "uploaded": 1,
-            "papers": [{"paper_id": paper["paper_id"], "title": paper["title"]}],
-        }
+        try:
+            form = await request.form()
+            fields = dict(form)
+            paper = build_paper_record(file_data, file.filename or "upload.pdf", fields)
+            insert_papers([paper])
+            asyncio.create_task(run_embed_new_paper(paper["paper_id"]))
+            return {
+                "ok": True,
+                "uploaded": 1,
+                "papers": [{"paper_id": paper["paper_id"], "title": paper["title"]}],
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"[upload] Multipart upload failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)[:200]}")
     else:
         # JSON body with base64-encoded file(s)
         body = await request.json()
@@ -884,43 +902,59 @@ async def upload(request: Request, file: Optional[UploadFile] = File(None), admi
         if not files_info:
             raise HTTPException(status_code=400, detail="No files provided")
         results = []
-        for file_info in files_info:
-            buffer = base64.b64decode(file_info["base64"])
-            paper = {
-                "paper_id": f"sha256_{hashlib.sha256(buffer).hexdigest()}",
-                "title": file_info.get("title", file_info.get("filename", "").replace(".pdf", "")),
-                "authors": [s.strip() for s in (file_info.get("authors", "Unknown") or "Unknown").split(",")],
-                "year": int(file_info.get("year", time.gmtime().tm_year)),
-                "venue": file_info.get("venue", ""),
-                "doi": file_info.get("doi", ""),
-                "arxiv_id": None,
-                "pmid": None,
-                "pmcid": None,
-                "file_path": f"01_curated/original/sha256_{hashlib.sha256(buffer).hexdigest()}.pdf",
-                "file_hash_sha256": hashlib.sha256(buffer).hexdigest(),
-                "file_size_bytes": len(buffer),
-                "file_ext": ".pdf",
-                "added_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                "tags": [s.strip() for s in (file_info.get("tags", "Uploaded") or "Uploaded").split(",") if s.strip()],
-                "abstract": file_info.get("abstract", ""),
-                "status": "curated",
-                "source": file_info.get("source", "Upload"),
-                "kind": "original",
-                "source_path": f"Upload/{file_info.get('filename', 'upload.pdf')}",
-                "display_path": f"01_curated/original/sha256_{hashlib.sha256(buffer).hexdigest()}.pdf",
-            }
-            UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-            dest = UPLOAD_DIR / f"sha256_{hashlib.sha256(buffer).hexdigest()}.pdf"
-            dest.write_bytes(buffer)
-            results.append(paper)
-        insert_papers(results)
+        errors = []
+        for idx, file_info in enumerate(files_info):
+            try:
+                buffer = base64.b64decode(file_info["base64"])
+                hash_hex = hashlib.sha256(buffer).hexdigest()
+                paper = {
+                    "paper_id": f"sha256_{hash_hex}",
+                    "title": file_info.get("title", file_info.get("filename", "").replace(".pdf", "")),
+                    "authors": [s.strip() for s in (file_info.get("authors", "Unknown") or "Unknown").split(",")],
+                    "year": int(file_info.get("year", time.gmtime().tm_year)),
+                    "venue": file_info.get("venue", ""),
+                    "doi": file_info.get("doi", ""),
+                    "arxiv_id": None,
+                    "pmid": None,
+                    "pmcid": None,
+                    "file_path": f"01_curated/original/sha256_{hash_hex}.pdf",
+                    "file_hash_sha256": hash_hex,
+                    "file_size_bytes": len(buffer),
+                    "file_ext": ".pdf",
+                    "added_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "tags": [s.strip() for s in (file_info.get("tags", "Uploaded") or "Uploaded").split(",") if s.strip()],
+                    "abstract": file_info.get("abstract", ""),
+                    "status": "curated",
+                    "source": file_info.get("source", "Upload"),
+                    "kind": "original",
+                    "source_path": f"Upload/{file_info.get('filename', 'upload.pdf')}",
+                    "display_path": f"01_curated/original/sha256_{hash_hex}.pdf",
+                }
+                UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+                dest = UPLOAD_DIR / f"sha256_{hash_hex}.pdf"
+                dest.write_bytes(buffer)
+                results.append(paper)
+            except Exception as e:
+                filename = file_info.get("filename", f"item_{idx}")
+                print(f"[upload] JSON upload failed for {filename}: {e}")
+                errors.append({"filename": filename, "error": str(e)[:200]})
+        if not results:
+            raise HTTPException(status_code=400, detail={"message": "No files could be processed", "errors": errors})
+        try:
+            insert_papers(results)
+        except Exception as e:
+            print(f"[upload] DB insert failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Database insert failed: {str(e)[:200]}")
         for paper in results:
             asyncio.create_task(run_embed_new_paper(paper["paper_id"]))
-        return {
+        response = {
             "ok": True,
             "uploaded": len(results),
             "papers": [{"paper_id": p["paper_id"], "title": p["title"]} for p in results],
         }
+        if errors:
+            response["errors"] = errors
+        return response
 
 @app.post("/api/admin/upload-and-crawl")
 async def upload_and_crawl(file: UploadFile = File(...), admin_user: dict = Depends(require_admin)):
@@ -942,8 +976,12 @@ async def upload_and_crawl(file: UploadFile = File(...), admin_user: dict = Depe
     # Save PDF
     pdf_filename = f"sha256_{hash_hex}.pdf"
     dest = UPLOAD_DIR / pdf_filename
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_bytes(file_data)
+    try:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(file_data)
+    except Exception as e:
+        print(f"[upload-and-crawl] Failed to save PDF for {paper_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save PDF: {str(e)[:200]}")
 
     # --- Convert PDF → HTML via pdf2htmlEX ---
     html_output = HTML_DIR / f"{paper_id}.html"
@@ -1037,44 +1075,60 @@ async def confirm_papers(request: Request, admin_user: dict = Depends(require_ad
         raise HTTPException(status_code=400, detail="No papers to confirm")
 
     records = []
-    for p in papers:
-        record = {
-            "paper_id": p["paper_id"],
-            "title": p.get("title", ""),
-            "authors": p.get("authors", []),
-            "year": p.get("year"),
-            "venue": p.get("venue", ""),
-            "doi": p.get("doi", ""),
-            "arxiv_id": None,
-            "pmid": None,
-            "pmcid": None,
-            "file_path": p["file_path"],
-            "file_hash_sha256": p["paper_id"].replace("sha256_", ""),
-            "file_size_bytes": p.get("file_size_bytes", 0),
-            "file_ext": ".pdf",
-            "added_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "tags": p.get("tags", ["Uploaded"]),
-            "abstract": p.get("abstract", ""),
-            "status": "curated",
-            "source": p.get("source", "Upload"),
-            "kind": "original",
-            "source_path": f"Upload/{p.get('filename', 'upload.pdf')}",
-            "display_path": p["file_path"],
-            "html_path": p.get("html_path"),
-        }
-        records.append(record)
+    errors = []
+    for idx, p in enumerate(papers):
+        try:
+            record = {
+                "paper_id": p["paper_id"],
+                "title": p.get("title", ""),
+                "authors": p.get("authors", []),
+                "year": p.get("year"),
+                "venue": p.get("venue", ""),
+                "doi": p.get("doi", ""),
+                "arxiv_id": None,
+                "pmid": None,
+                "pmcid": None,
+                "file_path": p["file_path"],
+                "file_hash_sha256": p["paper_id"].replace("sha256_", ""),
+                "file_size_bytes": p.get("file_size_bytes", 0),
+                "file_ext": ".pdf",
+                "added_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "tags": p.get("tags", ["Uploaded"]),
+                "abstract": p.get("abstract", ""),
+                "status": "curated",
+                "source": p.get("source", "Upload"),
+                "kind": "original",
+                "source_path": f"Upload/{p.get('filename', 'upload.pdf')}",
+                "display_path": p["file_path"],
+                "html_path": p.get("html_path"),
+            }
+            records.append(record)
+        except Exception as e:
+            paper_id = p.get("paper_id", f"item_{idx}")
+            print(f"[confirm-papers] Record build failed for {paper_id}: {e}")
+            errors.append({"paper_id": paper_id, "error": str(e)[:200]})
 
-    insert_papers(records)
+    if not records:
+        raise HTTPException(status_code=400, detail={"message": "No valid paper records", "errors": errors})
+
+    try:
+        insert_papers(records)
+    except Exception as e:
+        print(f"[confirm-papers] DB insert failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Database insert failed: {str(e)[:200]}")
 
     # Trigger embeddings in background
     for r in records:
         asyncio.create_task(run_embed_new_paper(r["paper_id"]))
 
-    return {
+    response = {
         "ok": True,
         "confirmed": len(records),
         "papers": [{"paper_id": r["paper_id"], "title": r["title"]} for r in records],
     }
+    if errors:
+        response["errors"] = errors
+    return response
 
 # --- HTML Generation ---
 

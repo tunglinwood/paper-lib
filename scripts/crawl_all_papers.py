@@ -17,12 +17,14 @@ import time
 from pathlib import Path
 
 import requests
+from bs4 import BeautifulSoup
 from crawl4ai.processors.pdf.processor import NaivePDFProcessorStrategy
 
 # --- Config ---
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = ROOT / "papers.db"
 PDF_BASE = ROOT / "archive" / "_unsorted" / "Library"
+HTML_DIR = ROOT / "archive" / "_unsorted" / "Library" / "01_curated" / "html"
 
 LLM_BASE = os.getenv("LLM_BASE_URL", "http://localhost:8000/v1")
 LLM_MODEL = os.getenv("LLM_MODEL", "glm-4.5-air")
@@ -92,6 +94,32 @@ def extract_full_text(pdf_path: str) -> str:
                 texts.append(cleaned)
 
     return "\n\n".join(texts)
+
+
+def extract_full_text_from_html(html_path: Path) -> str:
+    """Extract readable text from a pdf2htmlEX-generated HTML file."""
+    html = html_path.read_text(encoding="utf-8", errors="ignore")
+    soup = BeautifulSoup(html, "html.parser")
+
+    # Remove script/style/nav tags that contain no paper text
+    for tag in soup(["script", "style", "noscript"]):
+        tag.decompose()
+
+    text = soup.get_text(separator="\n")
+    lines = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        line = re.sub(r"\s+", " ", line)
+        if line:
+            lines.append(line)
+
+    full = "\n\n".join(lines)
+    # Remove surrogate-like characters and null bytes
+    full = "".join(c for c in full if not (0xD800 <= ord(c) <= 0xDFFF))
+    full = full.replace("\x00", "")
+    return full
 
 
 def extract_metadata(text: str) -> dict:
@@ -204,33 +232,46 @@ def main():
         paper_id = paper.get("paper_id", "")
         file_path = paper.get("file_path", "")
 
-        if not file_path:
+        if not paper_id:
             skip_count += 1
-            print(f"[{idx}/{len(paper_dicts)}] SKIP {paper.get('title', 'N/A')[:40]}... (no file_path)", file=sys.stderr)
+            print(f"[{idx}/{len(paper_dicts)}] SKIP {paper.get('title', 'N/A')[:40]}... (no paper_id)", file=sys.stderr)
             continue
 
-        full_path = PDF_BASE / file_path
-        if not full_path.exists():
-            skip_count += 1
-            print(f"[{idx}/{len(paper_dicts)}] SKIP {paper.get('title', 'N/A')[:40]}... (PDF not found)", file=sys.stderr)
-            continue
+        # Prefer the converted HTML file; fall back to PDF if HTML is missing
+        html_path = HTML_DIR / f"{paper_id}.html"
+        pdf_path = None
+        if file_path:
+            pdf_path = PDF_BASE / file_path
 
-        # Skip very large PDFs
-        file_size_mb = full_path.stat().st_size / (1024 * 1024)
-        if file_size_mb > 100:
+        if html_path.exists():
+            source_path = html_path
+            source_type = "html"
+        elif pdf_path and pdf_path.exists():
+            source_path = pdf_path
+            source_type = "pdf"
+            # Skip very large PDFs
+            file_size_mb = source_path.stat().st_size / (1024 * 1024)
+            if file_size_mb > 100:
+                skip_count += 1
+                print(f"[{idx}/{len(paper_dicts)}] SKIP {paper.get('title', 'N/A')[:40]}... (too large: {file_size_mb:.0f}MB)", file=sys.stderr)
+                continue
+        else:
             skip_count += 1
-            print(f"[{idx}/{len(paper_dicts)}] SKIP {paper.get('title', 'N/A')[:40]}... (too large: {file_size_mb:.0f}MB)", file=sys.stderr)
+            print(f"[{idx}/{len(paper_dicts)}] SKIP {paper.get('title', 'N/A')[:40]}... (source not found)", file=sys.stderr)
             continue
 
         title = paper.get("title", "Untitled")[:60]
         print(f"[{idx}/{len(paper_dicts)}] Crawling: {title}...", file=sys.stderr)
 
         try:
-            # Step 1: Extract full text via crawl4ai
+            # Step 1: Extract full text from HTML or PDF
             t0 = time.time()
-            full_text = extract_full_text(str(full_path))
+            if source_type == "html":
+                full_text = extract_full_text_from_html(source_path)
+            else:
+                full_text = extract_full_text(str(source_path))
             elapsed = time.time() - t0
-            print(f"      Extracted {len(full_text)} chars in {elapsed:.1f}s", file=sys.stderr)
+            print(f"      Extracted {len(full_text)} chars from {source_type} in {elapsed:.1f}s", file=sys.stderr)
 
             if not full_text:
                 print(f"      No text extracted", file=sys.stderr)

@@ -19,9 +19,9 @@ papers.db-shm
 # Large binary data
 archive/
 pdf2htmlEX/
-
-# Index files (regenerated from DB)
-index.jsonl
+data/
+paper-lib-data.zip
+paper-lib-data-part-*
 
 # Tool data
 .claude/
