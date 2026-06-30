@@ -54,6 +54,11 @@ const translations = {
         relatedPapers: 'Related Papers',
         noRelatedPapers: 'No related papers found.',
 
+        // Auth header buttons
+        adminLink: 'Admin',
+        loginBtn: 'Login',
+        logoutBtn: 'Logout',
+
         // Language toggle
         langToggle: '中文',
 
@@ -114,6 +119,11 @@ const translations = {
         abstract: '摘要',
         relatedPapers: '相关论文',
         noRelatedPapers: '未找到相关论文。',
+
+        // Auth header buttons
+        adminLink: '管理后台',
+        loginBtn: '登录',
+        logoutBtn: '退出登录',
 
         // Language toggle
         langToggle: 'English',
@@ -196,6 +206,12 @@ export function applyTranslations() {
     // Modal
     const relatedH3 = document.querySelector('#relatedPapers h3');
     if (relatedH3) relatedH3.textContent = t('relatedPapers');
+
+    // Auth header buttons
+    const adminLink = document.getElementById('adminLink');
+    if (adminLink) adminLink.textContent = t('adminLink');
+    const authBtn = document.getElementById('authBtn');
+    if (authBtn && !authBtn.dataset.dynamic) authBtn.textContent = t('loginBtn');
 
     // Language toggle button
     const langBtn = document.getElementById('langToggleBtn');

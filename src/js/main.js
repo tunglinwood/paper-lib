@@ -239,11 +239,11 @@ function setupAuthUI() {
 
     const updateUI = () => {
         if (isLoggedIn()) {
-            authBtn.textContent = 'Logout';
+            authBtn.textContent = t('logoutBtn');
             authBtn.style.display = 'inline-block';
             adminLink.style.display = isAdmin() ? 'inline-block' : 'none';
         } else {
-            authBtn.textContent = 'Login';
+            authBtn.textContent = t('loginBtn');
             authBtn.style.display = 'inline-block';
             adminLink.style.display = 'none';
         }
