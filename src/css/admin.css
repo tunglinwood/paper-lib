@@ -410,15 +410,28 @@
     border-color: #cbd5e1;
 }
 
-.upload-start-btn {
+.upload-start-btn,
+.upload-confirm-btn {
     background: var(--primary);
     color: white;
     border-color: var(--primary);
 }
 
-.upload-start-btn:hover:not(:disabled) {
+.upload-start-btn:hover:not(:disabled),
+.upload-confirm-btn:hover:not(:disabled) {
     background: #2563eb;
     border-color: #2563eb;
+}
+
+.upload-skip-btn {
+    background: #fffbeb;
+    color: #b45309;
+    border-color: #fcd34d;
+}
+
+.upload-skip-btn:hover:not(:disabled) {
+    background: #fef3c7;
+    border-color: #fbbf24;
 }
 
 .upload-action-btn svg {

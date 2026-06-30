@@ -232,10 +232,19 @@
                 <!-- Stage 3: Review & Confirm -->
                 <div id="uploadStage3" class="upload-stage" style="display:none;">
                     <div id="reviewList"></div>
-                    <div class="form-actions" style="margin-top:1rem;">
-                        <button type="button" class="action-btn" data-action="close-upload">Cancel</button>
-                        <button type="button" class="action-btn" id="skipIncompleteBtn" data-action="skip-incomplete" style="display:none;">Skip Incomplete</button>
-                        <button type="button" class="action-btn primary" id="confirmAllBtn" data-action="confirm-all">Confirm All</button>
+                    <div class="upload-actions">
+                        <button type="button" class="upload-action-btn upload-cancel-btn" data-action="close-upload">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            Cancel
+                        </button>
+                        <button type="button" class="upload-action-btn upload-skip-btn" id="skipIncompleteBtn" data-action="skip-incomplete" style="display:none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+                            Skip Incomplete
+                        </button>
+                        <button type="button" class="upload-action-btn upload-confirm-btn" id="confirmAllBtn" data-action="confirm-all">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Confirm All
+                        </button>
                     </div>
                 </div>
             </div>
