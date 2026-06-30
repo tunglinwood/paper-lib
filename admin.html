@@ -211,9 +211,15 @@
                             <tbody id="uploadFileListBody"></tbody>
                         </table>
                     </div>
-                    <div class="form-actions" style="margin-top:1rem;">
-                        <button type="button" class="action-btn" data-action="close-upload">Cancel</button>
-                        <button type="button" class="action-btn primary" id="uploadStartBtn" data-action="start-upload" disabled>Upload & Extract</button>
+                    <div class="upload-actions">
+                        <button type="button" class="upload-action-btn upload-cancel-btn" data-action="close-upload">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            Cancel
+                        </button>
+                        <button type="button" class="upload-action-btn upload-start-btn" id="uploadStartBtn" data-action="start-upload" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            Upload & Extract
+                        </button>
                     </div>
                 </div>
 
