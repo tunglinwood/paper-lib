@@ -1019,13 +1019,18 @@ async def upload_and_crawl(file: UploadFile = File(...), admin_user: dict = Depe
 
     # --- Extract metadata from HTML (preferred) or PDF (fallback) ---
     script = str(ROOT / "extract_pdf_metadata.py")
-    if not html_error:
-        # Extract from HTML
-        stdout, stderr, rc = await run_python_script([script, "--html", str(html_output)], timeout=300)
-    else:
-        # Fall back to PDF extraction
-        pdf_path = dest
-        stdout, stderr, rc = await run_python_script([script, str(pdf_path)], timeout=300)
+    stdout, stderr, rc = "", "", -1
+    try:
+        if not html_error:
+            # Extract from HTML
+            stdout, stderr, rc = await run_python_script([script, "--html", str(html_output)], timeout=300)
+        else:
+            # Fall back to PDF extraction
+            pdf_path = dest
+            stdout, stderr, rc = await run_python_script([script, str(pdf_path)], timeout=300)
+    except Exception as e:
+        stderr = f"Metadata extraction failed: {str(e)[:300]}"
+        rc = -1
 
     if rc != 0:
         fallback_title = file.filename.replace(".pdf", "").replace("_", " ").replace("-", " ") if file.filename else ""
