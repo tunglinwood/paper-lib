@@ -6,7 +6,7 @@ import { extractTopics, populateYearPills, updateYearPillUI, populateTopics } fr
 import { loadTrending } from './actions/views.js';
 import { showModal, closeModal, setupPanelResize } from './render/modal.js';
 import { t, setLang, getCurrentLang, applyTranslations } from './i18n.js';
-import { initAgent } from './agent.js';
+// import { initAgent } from './agent.js';
 import { fetchCurrentUser, logout, isLoggedIn, isAdmin } from './auth.js';
 
 // --- Data loading & initialization ---
@@ -229,7 +229,7 @@ export async function init() {
     setupLangToggle();
     window.addEventListener('hashchange', handleHash);
     handleHash();
-    await initAgent();
+    // await initAgent();
 }
 
 function setupAuthUI() {
