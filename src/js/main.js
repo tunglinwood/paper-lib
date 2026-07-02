@@ -7,7 +7,7 @@ import { loadTrending } from './actions/views.js';
 import { showModal, closeModal, setupPanelResize } from './render/modal.js';
 import { t, setLang, getCurrentLang, applyTranslations } from './i18n.js';
 // import { initAgent } from './agent.js';
-import { fetchCurrentUser, logout, isLoggedIn, isAdmin } from './auth.js';
+import { fetchCurrentUser, logout, isLoggedIn, isAdmin, clearToken } from './auth.js';
 
 // --- Data loading & initialization ---
 async function loadStats() {
@@ -249,6 +249,9 @@ function setupAuthUI() {
         }
     };
 
+    // Optimistically show logged-in state before server validation
+    updateUI();
+
     authBtn.addEventListener('click', async () => {
         if (isLoggedIn()) {
             await logout();
@@ -258,7 +261,15 @@ function setupAuthUI() {
         }
     });
 
-    fetchCurrentUser().then(updateUI).catch(updateUI);
+    fetchCurrentUser().then(user => {
+        if (user) {
+            updateUI();
+        } else {
+            // Token invalid or expired — clear and show login
+            clearToken();
+            updateUI();
+        }
+    }).catch(() => updateUI());
 }
 
 function setupLangToggle() {
