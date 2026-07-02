@@ -26,9 +26,9 @@ DB_PATH = ROOT / "papers.db"
 PDF_BASE = ROOT / "archive" / "_unsorted" / "Library"
 HTML_DIR = ROOT / "archive" / "_unsorted" / "Library" / "01_curated" / "html"
 
-LLM_BASE = os.getenv("LLM_BASE_URL", "http://localhost:8000/v1")
-LLM_MODEL = os.getenv("LLM_MODEL", "glm-4.5-air")
-LLM_API_KEY = os.getenv("LLM_API_KEY", "dummy")
+LLM_BASE = os.getenv("LLM_BASE_URL", "http://localhost:54001/v1")
+LLM_MODEL = os.getenv("LLM_MODEL", "hua-llm")
+LLM_API_KEY = os.getenv("LLM_API_KEY", "sk-q6r8rbzkVzzJKzOC3Hme0g")
 
 MAX_PAGES = 50
 MAX_TEXT_CHARS = 100_000  # Max text sent to LLM for metadata extraction
