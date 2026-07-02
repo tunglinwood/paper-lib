@@ -17,9 +17,9 @@ from pathlib import Path
 import requests
 from crawl4ai.processors.pdf.processor import NaivePDFProcessorStrategy
 
-LLM_BASE = os.getenv("LLM_BASE_URL", "http://localhost:54001/v1")
+LLM_BASE = os.getenv("LLM_BASE_URL", "http://223.108.218.44:54001/v1")
 LLM_MODEL = os.getenv("LLM_MODEL", "hua-llm")
-LLM_API_KEY = os.getenv("LLM_API_KEY", "sk-q6r8rbzkVzzJKzOC3Hme0g")
+LLM_API_KEY = os.getenv("LLM_API_KEY", "sk-v-FMlAezr7Y9GjHKwdjdWA")
 
 EXTRACTION_PROMPT = """You are a research paper metadata extractor.
 Given the text extracted from the first pages of a research paper PDF, extract the following fields and return them as a single JSON object.

@@ -662,7 +662,11 @@ async def fetch_metadata(request: Request, admin_user: dict = Depends(require_ad
     if not url:
         raise HTTPException(status_code=400, detail="url required")
     script = str(ROOT / "autofill_url.py")
-    stdout, stderr, rc = await run_python_script([script, url], timeout=300)
+    try:
+        stdout, stderr, rc = await run_python_script([script, url], timeout=300)
+    except Exception as e:
+        print(f"fetch-metadata error: {e}")
+        raise HTTPException(status_code=500, detail=f"Metadata fetch failed: {str(e)[:200]}")
     if rc != 0:
         print(f"fetch-metadata error: {stderr}")
         raise HTTPException(status_code=500, detail=stderr or "Failed to fetch metadata")

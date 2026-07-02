@@ -12,9 +12,9 @@ import sys
 import requests
 
 CRAWL4AI_BASE = os.getenv("CRAWL4AI_BASE_URL", "http://174.1.21.1:11235")
-LLM_BASE = os.getenv("LLM_BASE_URL", "http://localhost:8000/v1")
-LLM_MODEL = os.getenv("LLM_MODEL", "glm-4.5-air")
-LLM_API_KEY = os.getenv("LLM_API_KEY", "dummy")
+LLM_BASE = os.getenv("LLM_BASE_URL", "http://223.108.218.44:54001/v1")
+LLM_MODEL = os.getenv("LLM_MODEL", "hua-llm")
+LLM_API_KEY = os.getenv("LLM_API_KEY", "sk-v-FMlAezr7Y9GjHKwdjdWA")
 
 EXTRACTION_PROMPT = """You are a research paper metadata extractor.
 Given the markdown content of a paper webpage, extract the following fields and return them as a single JSON object.
