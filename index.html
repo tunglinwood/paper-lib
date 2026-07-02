@@ -106,7 +106,7 @@
     <script type="module">
         import { requireAuth } from './src/js/auth.js';
         if (requireAuth()) {
-            import('./src/js/main.js').then(({ init }) => {
+            import('./src/js/main.js?v=2').then(({ init }) => {
                 import('./src/js/i18n.js').then(({ setLang, getCurrentLang }) => {
                     setLang(getCurrentLang());
                     init();
