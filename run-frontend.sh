@@ -4,11 +4,10 @@
 
 set -e
 
-export PATH="/home/huapad/.local/bin:$PATH"
 export HOME="/home/huapad"
 cd "$(dirname "$0")"
 
 export API_TARGET="${API_TARGET:-http://10.8.8.28:9000}"
-export PORT="${PORT:-80}"
+export PORT="${PORT:-3000}"
 
 exec node server.node.mjs

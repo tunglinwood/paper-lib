@@ -26,7 +26,7 @@ module.exports = {
       env: {
         NODE_ENV: 'development',
         API_TARGET: 'http://10.8.8.28:9000',
-        PORT: '80'
+        PORT: '3000'
       },
       autorestart: true,
       max_restarts: 999,
